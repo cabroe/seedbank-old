@@ -1,9 +1,9 @@
 ---
-name: Emotion Engine
+name: Neural Brain - Emotion Engine
 description: Affect Simulation via V-A-D (Valence, Arousal, Dominance) tracking
 ---
 
-# Emotion Engine
+# Neural Brain - Emotion Engine
 
 The Emotion Engine allows the agent to track, update, and retrieve its current affective state over time using the Neural Brain API's `working` memory contexts.
 
@@ -13,7 +13,7 @@ It models emotion on three axes:
 3. **Dominance** (0.0 to 10.0): How in-control or submissive the emotion feels.
 
 ## Scripts
-- `emotion.sh`: The core CLI.
+- `neural-brain-emotion.sh`: The core CLI.
   - `get <agent_id>`: Retrieves the current emotion.
   - `set <agent_id> <V> <A> <D> "<reason>"`: Hard-sets the emotion.
   - `shift <agent_id> <dV> <dA> <dD> "<reason>"`: Applies a delta shift to the current emotion.

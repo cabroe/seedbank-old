@@ -1,16 +1,16 @@
 ---
-name: Goal Hierarchy
+name: Neural Brain - Goal Hierarchy
 description: Intrinsic motivation and evaluating actions against active goals via semantic search
 ---
 
-# Goal Hierarchy
+# Neural Brain - Goal Hierarchy
 
 This skill forms the agent's intrinsic motivation. It manages a tree of active directives and provides a fast, offline vector-based evaluation tool to check if a proposed action aligns with the agent's core goals.
 
 Goals are stored in Neural Brain as standard seeds with the `["goal"]` tag.
 
 ## Scripts
-- `goals.sh`: The core CLI.
+- `neural-brain-goal.sh`: The core CLI.
   - `add "<title>" "<description>" [parent_id]`: Creates a new active goal.
   - `list [status]`: Lists goals (active, completed, or all).
   - `complete <seed_id>`: Marks a goal as completed.
