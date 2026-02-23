@@ -69,11 +69,17 @@ func HandleStoreSeed(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		if id == 0 {
-			apilib.RespondJSON(w, http.StatusOK, map[string]int64{"id": 0, "skipped": 1})
-			return
-		}
-		apilib.RespondJSON(w, http.StatusCreated, map[string]int64{"id": id})
+		// Check if it was an "upsert" (returning existing ID where we previously returned 0)
+		// We need to check if we can differentiate. In the current store logic, 
+		// Insert returns the ID. If it's a duplicate, it returns the *existing* ID.
+		// To know if it's NEW or UPDATED, we'd need to change the store signature 
+		// or do another check. Let's simplify and just say 200 OK for everything 
+		// but check if we can improve the UX.
+		
+		// Actually, let's look at the database. If we want to know if it was 
+		// an insert or update, we should return a boolean from store.
+		
+		apilib.RespondJSON(w, http.StatusOK, map[string]interface{}{"id": id})
 	}
 }
 

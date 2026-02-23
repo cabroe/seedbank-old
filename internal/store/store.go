@@ -46,12 +46,28 @@ func (s *Store) Insert(ctx context.Context, content string, metadata json.RawMes
 
 	if s.dedupThreshold > 0 {
 		var similarity float64
+		var id int64
 		err := s.pool.QueryRow(ctx,
-			`SELECT (1 - (embedding <=> $1)) AS sim FROM seeds ORDER BY embedding <=> $1 LIMIT 1`,
+			`SELECT id, (1 - (embedding <=> $1)) AS sim FROM seeds ORDER BY embedding <=> $1 LIMIT 1`,
 			vec,
-		).Scan(&similarity)
+		).Scan(&id, &similarity)
 		if err == nil && similarity >= s.dedupThreshold {
-			return 0, nil // skip duplicate
+			// Semantic Upsert: Update timestamp and increment update_count in metadata
+			_, err = s.pool.Exec(ctx,
+				`UPDATE seeds SET 
+					created_at = NOW(),
+					metadata = jsonb_set(
+						COALESCE(metadata, '{}'::jsonb), 
+						'{update_count}', 
+						(COALESCE(metadata->>'update_count', '0')::int + 1)::text::jsonb
+					)
+				 WHERE id = $1`,
+				id,
+			)
+			if err != nil {
+				return 0, err
+			}
+			return id, nil // return existing ID to indicate "updated"
 		}
 	}
 
