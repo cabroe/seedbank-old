@@ -8,7 +8,7 @@ description: Basic CRUD operations for the Neural Brain API
 This skill provides a simple bash-based CLI to interact with the core Neural Brain backend, specifically handling the creation and searching of generalized AI context structures.
 
 ## Scripts
-- `neural-brain-memory.sh`:
+- `bash {baseDir}/scripts/neural-brain-memory.sh`:
   - Provide a command line interface wrap around Neural Brain's `POST /agent-contexts` and `GET /search` functionality.
 
 ## Usage Guidelines

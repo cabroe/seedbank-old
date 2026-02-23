@@ -8,7 +8,7 @@ description: Meta-cognition engine to extract Deep Beliefs from short-term memor
 The Self-Reflection skill enables the agent to gather recent short-term memories and commit synthesized, high-level insights as persistent "Deep Beliefs" into long-term memory.
 
 ## Scripts
-- `neural-brain-reflection.sh`: The core CLI.
+- `bash {baseDir}/scripts/neural-brain-reflection.sh`: The core CLI.
   - `gather <hours>`: Retrieves recent Neural Brain memories from the last X hours.
   - `commit "<insight>" <importance> <confidence>`: Saves a new insight to the database, tagged as a `["reflection", "core-belief"]`.
 

@@ -10,7 +10,7 @@ This skill forms the agent's intrinsic motivation. It manages a tree of active d
 Goals are stored in Neural Brain as standard seeds with the `["goal"]` tag.
 
 ## Scripts
-- `neural-brain-goal.sh`: The core CLI.
+- `bash {baseDir}/scripts/neural-brain-goal.sh`: The core CLI.
   - `add "<title>" "<description>" [parent_id]`: Creates a new active goal.
   - `list [status]`: Lists goals (active, completed, or all).
   - `complete <seed_id>`: Marks a goal as completed.

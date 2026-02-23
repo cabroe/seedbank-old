@@ -13,7 +13,7 @@ It models emotion on three axes:
 3. **Dominance** (0.0 to 10.0): How in-control or submissive the emotion feels.
 
 ## Scripts
-- `neural-brain-emotion.sh`: The core CLI.
+- `bash {baseDir}/scripts/neural-brain-emotion.sh`: The core CLI.
   - `get <agent_id>`: Retrieves the current emotion.
   - `set <agent_id> <V> <A> <D> "<reason>"`: Hard-sets the emotion.
   - `shift <agent_id> <dV> <dA> <dD> "<reason>"`: Applies a delta shift to the current emotion.
