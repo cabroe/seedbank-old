@@ -27,9 +27,11 @@ case "${1:-}" in
         result=$(curl -s "${BASE_URL}/search?q=*&limit=${limit}")
             
         # Filter and cleanly format the output for an LLM prompt
+        # Ignore system-generated seeds (metrik, learning) to prevent AI feedback loops
         echo "$result" | jq -r --arg cutoff "$cutoff" '
             .[] 
             | select(.created_at >= $cutoff)
+            | select(.metadata.type != "metrik" and .metadata.type != "learning")
             | "[\(.created_at)] (ID: \(.id)): \(.content) | Tags: \(.metadata.tags // [])"
         '
         ;;
