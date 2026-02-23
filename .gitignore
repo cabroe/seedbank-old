@@ -1,6 +1,29 @@
-/neural-brain
-.env
+# Dependencies
+node_modules/
 .venv/
+
+# Build outputs
+/neural-brain
+dist/
+build/
+bin/
+obj/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment and secrets
+.env
+.env.local
+
+# Models and Scripts
 models/*.gtemodel
 models/gte-small/
 scripts/convert_model.py
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
