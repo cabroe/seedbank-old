@@ -13,10 +13,10 @@ VENV="$PROJECT_ROOT/.venv"
 cd "$PROJECT_ROOT"
 mkdir -p "$MODELS_DIR"
 
-# Python with deps: use PYTHON if it has safetensors+requests, else use/create .venv
-if [[ -n "${PYTHON}" ]] && "$PYTHON" -c "import safetensors, requests" 2>/dev/null; then
+# Python with deps: use PYTHON if it has safetensors+requests+numpy, else use/create .venv
+if [[ -n "${PYTHON}" ]] && "$PYTHON" -c "import safetensors, requests, numpy" 2>/dev/null; then
   :
-elif [[ -x "$VENV/bin/python" ]] && "$VENV/bin/python" -c "import safetensors, requests" 2>/dev/null; then
+elif [[ -x "$VENV/bin/python" ]] && "$VENV/bin/python" -c "import safetensors, requests, numpy" 2>/dev/null; then
   PYTHON="$VENV/bin/python"
 else
   echo "==> Setting up .venv and installing safetensors, requests..."
@@ -30,7 +30,7 @@ else
     fi
   fi
   PYTHON="$VENV/bin/python"
-  "$PYTHON" -m pip install -q safetensors requests
+  "$PYTHON" -m pip install -q safetensors requests numpy
 fi
 
 if [[ -f "$OUTPUT_FILE" ]]; then

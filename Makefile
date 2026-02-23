@@ -1,100 +1,65 @@
-.PHONY: help up down down-all model env build run test install install-service install-skill reinstall status logs clean dev install-ui
+.PHONY: help build run dev install logs db-up db-down clean status
 
 help:
-	@echo "Neural Brain – wichtige Befehle"
-	@echo "  make install         Build + Docker-Image + Unit + Skill installieren"
-	@echo "  make reinstall       clean, install, Docker (Postgres) starten"
-	@echo "  make dev             Vite-Frontend im Dev-Mode starten"
-	@echo "  make install-ui      Frontend-Abhaengigkeiten (npm) installieren"
-	@echo "  make status          Uebersicht: Binary, Docker, systemd, Skill, Health"
-	@echo "  make clean           Docker (down -v --rmi all), systemd-Dienst deaktivieren/entfernen, Binary loeschen"
-	@echo "  make up              Postgres (pgvector) starten"
-	@echo "  make down            Postgres stoppen"
-	@echo "  make down-all        Down + Volumes + Images loeschen"
-	@echo "  make model           GTE-Small-Modell einmalig einrichten"
-	@echo "  make env             .env aus .env.example anlegen"
-	@echo "  make build           Binary + Docker-Image bauen"
-	@echo "  make run             Build + Server im Vordergrund"
-	@echo "  make test            Neural Brain-Health (Server muss laufen)"
-	@echo "  make install-service systemd User-Unit installieren"
-	@echo "  make install-skill   Skill neural-brain-memory nach ~/.openclaw/workspace/skills/ kopieren"
-	@echo "  make logs            Journal folgen (tail -f, Strg+C zum Beenden)"
+	@echo "=== Neural Brain Makefile ==="
+	@echo "  make build      - Baut das Frontend (Vite) und das Backend (Go)"
+	@echo "  make run        - Baut das Projekt und führt den Server im Vordergrund aus"
+	@echo "  make dev        - Startet das Frontend im Dev-Modus (Hot-Reloading)"
+	@echo "  make db-up      - Startet die Postgres-Datenbank via Docker"
+	@echo "  make db-down    - Stoppt die Postgres-Datenbank"
+	@echo "  make db-clean   - Löscht Docker-Container & Images (Daten/Volumes bleiben erhalten)"
+	@echo "  make install    - Baut das Projekt und installiert den systemd-Dienst"
+	@echo "  make logs       - Zeigt die Live-Logs des systemd-Dienstes"
+	@echo "  make clean      - Stoppt den Dienst, löscht Binary und Build-Dateien"
+	@echo "  make status     - Zeigt den Status von Dienst, API und Datenbank"
 
-up:
+db-up:
 	docker compose up -d
 
-down:
-	docker compose down
+db-down:
+	docker compose stop
 
-docker: up
+db-clean:
+	docker compose down --rmi all
 
-down-all:
-	docker compose down -v --rmi all
-
-clean:
-	docker compose down -v --rmi all
-	-systemctl --user stop neural-brain 2>/dev/null || true
-	-systemctl --user disable neural-brain 2>/dev/null || true
-	rm -f $$HOME/.config/systemd/user/neural-brain.service
-	systemctl --user daemon-reload 2>/dev/null || true
-	rm -f neural-brain
-
-model:
-	./scripts/setup-model.sh
-
-env:
-	cp .env.example .env
-
-build-ui:
+build:
+	npm install --prefix backend
 	npm run build --prefix backend
-
-build: build-ui
 	go build -o neural-brain .
-	docker build -t neural-brain:latest .
-
-install: build install-service install-skill
-
-reinstall: clean install up
 
 run: build
 	./neural-brain
 
 dev:
+	npm install --prefix backend
 	npm run dev --prefix backend
 
-install-ui:
-	npm install --prefix backend
-
-test:
-	./skills/neural-brain-memory/scripts/neural-brain-memory.sh test
-
-install-service:
+install: build
 	mkdir -p $$HOME/.config/systemd/user
 	cp neural-brain.service $$HOME/.config/systemd/user/
 	systemctl --user daemon-reload
-	systemctl --user enable neural-brain
+	systemctl --user enable --now neural-brain
 	systemctl --user restart neural-brain
-	@echo "Status: systemctl --user status neural-brain"
+	@echo "systemd-Dienst 'neural-brain' installiert und gestartet."
 
-install-skill:
-	mkdir -p $$HOME/.openclaw/workspace/skills
-	cp -R skills/neural-brain-memory $$HOME/.openclaw/workspace/skills/
+logs:
+	journalctl --user -u neural-brain -n 50 -f
+
+clean:
+	-systemctl --user stop neural-brain 2>/dev/null || true
+	rm -f neural-brain
+	rm -rf backend/dist
 
 status:
 	@echo "=== Binary ==="
-	@test -f neural-brain && ls -la neural-brain || echo "nicht vorhanden"
+	@test -f neural-brain && ls -lh neural-brain || echo "Nicht vorhanden"
 	@echo ""
-	@echo "=== Docker (Compose) ==="
-	@docker compose ps 2>/dev/null || echo "nicht erreichbar / kein Projekt"
+	@echo "=== Datenbank ==="
+	@docker compose ps 2>/dev/null || echo "Nicht erreichbar"
 	@echo ""
-	@echo "=== systemd (neural-brain) ==="
-	@systemctl --user status neural-brain --no-pager 2>/dev/null || echo "Unit nicht geladen"
+	@echo "=== systemd-Dienst ==="
+	@systemctl --user status neural-brain --no-pager 2>/dev/null || echo "Nicht aktiv"
 	@echo ""
-	@echo "=== Skill (OpenClaw) ==="
-	@test -d $$HOME/.openclaw/workspace/skills/neural-brain-memory && echo "installiert: $$HOME/.openclaw/workspace/skills/neural-brain-memory" || echo "nicht installiert"
-	@echo ""
-	@echo "=== Health (localhost:9124) ==="
-	@code=$$(curl -s -o /dev/null -w "%{http_code}" http://localhost:9124/health 2>/dev/null); test -n "$$code" && echo "HTTP $$code" || echo "nicht erreichbar"
-
-logs:
-	journalctl --user -u neural-brain -n 50 -f --no-pager
+	@echo "=== API Health (localhost:9124) ==="
+	@curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost:9124/health 2>/dev/null || echo "Offline"
+	@echo "" --no-pager

@@ -1,21 +1,22 @@
 # Neural Brain
 
-Minimaler, lokaler semantischer Speicher für OpenClaw: Go + pgvector + GTE-Small (gte-go). Ein Prozess, ~70 MB Modell, kein Python/Ollama zur Laufzeit.
+Minimaler, lokaler semantischer Speicher für OpenClaw: Go + pgvector + GTE-Small (gte-go). Ein Prozess, ~70 MB Modell, kein Python/Ollama zur Laufzeit. Das Projekt enthält zudem ein direkt in die Go-Binary kompiliertes React-Web-Dashboard.
 
 **API und Skill kompatibel mit [Vanar Neutron Memory](https://openclaw.vanarchain.com/guide-openclaw)** (gleiche Endpoints, gleiche CLI-Nutzung wie `vanar-neutron-memory`).
 
 ## Voraussetzungen
 
 - Go 1.22+
+- NodeJS & npm (für das React-Frontend)
 - PostgreSQL mit [pgvector](https://github.com/pgvector/pgvector) (z. B. `pgvector/pgvector:pg16`)
-- Einmalig: Python 3 + `pip install safetensors requests` für das Modell-Setup
+- Einmalig: Python 3 + `pip install safetensors requests numpy` für das Modell-Setup
 
 ## Schnellstart
 
 ### 1. Postgres starten (mit pgvector)
 
 ```bash
-docker compose up -d
+make db-up
 ```
 
 Verbindung: `postgres://neural-brain:neural-brain@localhost:5433/neural-brain?sslmode=disable`
@@ -26,9 +27,8 @@ Verbindung: `postgres://neural-brain:neural-brain@localhost:5433/neural-brain?ss
 ./scripts/setup-model.sh
 ```
 
-Das Script erstellt bei Bedarf eine `.venv` und installiert dort `safetensors` und `requests` – kein System-pip nötig (PEP 668).
-
-Das Script lädt die Hugging-Face-Weights und konvertiert sie nach `models/gte-small.gtemodel`.
+Das Script erstellt bei Bedarf eine `.venv` und installiert dort `safetensors`, `requests` und `numpy` – kein System-pip nötig (PEP 668).
+Das Script lädt dann die Hugging-Face-Weights herunter und konvertiert sie nach `models/gte-small.gtemodel`.
 
 ### 3. Konfiguration
 
@@ -37,33 +37,41 @@ cp .env.example .env
 # Optional anpassen: DATABASE_URL, GTE_MODEL_PATH, PORT, DEDUP_THRESHOLD
 ```
 
-### 4. Server starten
+### 4. Server & Dashboard starten
+
+Da das Web-Dashboard fest in das Go-Backend integriert ist, muss es beim Start mitgebaut werden:
 
 ```bash
-go build -o neural-brain .
-./neural-brain
+make run
 ```
 
-Standard-Port: **9124**.
+Dieser Befehl baut das React-Frontend (`npm install`, `npm run build`), kompiliert die Go-Binary und startet den Server.
+
+Das **Mission Control Dashboard** ist nun erreichbar unter: **[http://localhost:9124](http://localhost:9124)**
 
 **Als systemd-User-Dienst** (optional):
 
-Startreihenfolge: Zuerst Postgres und Modell bereitstellen, dann Konfiguration, danach den Dienst starten:
-
 ```bash
-make up                              # Postgres (pgvector) starten
-./scripts/setup-model.sh             # GTE-Modell einmalig erzeugen
-make env                             # .env aus .env.example anlegen
-mkdir -p ~/.config/systemd/user
-cp neural-brain.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now neural-brain
-# Status: systemctl --user status neural-brain
+make install
+# Status prüfen:
+make status
 ```
 
-Bei Exit-Code 1: `journalctl --user -u neural-brain -n 50 --no-pager` zeigt die Fehlermeldung (z. B. Modell fehlt, DB nicht erreichbar). Die Unit lädt optional `.env` (`EnvironmentFile=-...`); fehlt die Datei, nutzt der Prozess seine Defaults.
+Bei Exit-Code 1: `make logs` zeigt die Fehlermeldung (z. B. Modell fehlt, DB nicht erreichbar). 
 
-Die Unit nutzt `%h` (= dein Home); bei anderem Projektpfad die Pfade in `neural-brain.service` anpassen.
+## Makefile Befehle
+
+```bash
+  make build      - Baut das Frontend (Vite) und das Backend (Go)
+  make run        - Baut das Projekt und führt den Server im Vordergrund aus
+  make dev        - Startet das Frontend im Dev-Modus (Hot-Reloading)
+  make db-up      - Startet die Postgres-Datenbank via Docker
+  make db-down    - Stoppt die Postgres-Datenbank
+  make install    - Baut das Projekt und installiert den systemd-Dienst
+  make logs       - Zeigt die Live-Logs des systemd-Dienstes
+  make clean      - Stoppt den Dienst, löscht Binary und Build-Dateien
+  make status     - Zeigt den Status von Dienst, API und Datenbank
+```
 
 ## Umgebungsvariablen
 
@@ -77,97 +85,26 @@ Die Unit nutzt `%h` (= dein Home); bei anderem Projektpfad die Pfade in `neural-
 ## API
 
 ### POST /seeds
-
 Speichert ein Seed (Text → Embedding → pgvector).
-
 ```bash
-curl -X POST http://localhost:9124/seeds \
-  -H "Content-Type: application/json" \
-  -d '{"content": "User mag Go und React. Grüße aus München.", "metadata": {"source": "memory-collector"}}'
+curl -X POST http://localhost:9124/seeds -H "Content-Type: application/json" -d '{"content": "User mag Go und React."}'
 ```
-
-Antwort: `201 Created` + `{"id": 1}` oder `200 OK` + `{"id": 0, "skipped": 1}` bei Dedup.
 
 ### GET /search?q=...&limit=10&threshold=0.5
+Semantische Suche.
 
-Semantische Suche. Optionale Parameter:
+### GET /seeds/recent?limit=10
+Chronologische Suche (neueste Einträge zuerst), ignoriert Vektor-Ähnlichkeit.
 
-- `q` (erforderlich) – Suchanfrage
-- `limit` (optional, Standard 10) – maximale Anzahl Treffer
-- `threshold` (optional, 0–1) – nur Treffer mit `score >= threshold` zurückgeben
-
-```bash
-curl "http://localhost:9124/search?q=Programmiersprachen&limit=5"
-curl "http://localhost:9124/search?q=Programmiersprachen&limit=10&threshold=0.5"
-```
-
-Antwort: JSON-Array mit `id`, `content`, `metadata`, `created_at`, `score` (Cosine-Similarity).
-
-### POST /agent-contexts
-
-Legt einen Agent-Context an (Session-Persistenz: episodic, semantic, procedural, working).
-
-```bash
-curl -X POST http://localhost:9124/agent-contexts \
-  -H "Content-Type: application/json" \
-  -d '{"agentId": "my-agent", "memoryType": "episodic", "payload": {"key": "value"}}'
-```
-
-Body: `agentId` (erforderlich), `memoryType` (erforderlich: `episodic` | `semantic` | `procedural` | `working`), `payload` (optional, Standard `{}`).  
-Antwort: `201 Created` + `{"id": "<uuid>"}`.
-
-### GET /agent-contexts?agentId=...&memoryType=...
-
-Listet Agent-Contexts. `agentId` erforderlich, `memoryType` optional (Filter).
-
-```bash
-curl "http://localhost:9124/agent-contexts?agentId=my-agent"
-curl "http://localhost:9124/agent-contexts?agentId=my-agent&memoryType=episodic"
-```
-
-Antwort: JSON-Array mit `id`, `agentId`, `memoryType`, `payload`, `createdAt`.
-
-### GET /agent-contexts/{id}
-
-Liefert einen einzelnen Agent-Context per ID. `404` wenn nicht gefunden.
-
-```bash
-curl "http://localhost:9124/agent-contexts/550e8400-e29b-41d4-a716-446655440000"
-```
-
-### GET /health
-
-Health-Check (Modell + DB).
-
-```bash
-curl http://localhost:9124/health
-```
+### POST & GET /agent-contexts
+Speichert und listet Agent-Kontexte (Session-Persistenz: episodic, semantic, procedural, working).
 
 ### GET /stats
-
-Liefert Aggregationen für das Mission-Control-Dashboard: `seedsCount`, `agentContextsCount`.
-
+Liefert Aggregationen (Counts) aus der Datenbank, ideal für Metriken-Dashboards.
 ```bash
 curl http://localhost:9124/stats
+# Antwort: {"seeds": 42, "contexts": 7}
 ```
-
-Antwort: `{"seedsCount": 42, "agentContextsCount": 7}`.
-
-## Mission Control Dashboard
-
-Ein einseitiges **AI Agent Mission Control Dashboard** (Dark Theme, „Bloomberg Terminal meets Gaming HUD“) liegt unter `web/dashboard.html`. Es zeigt Agent-Status, Live-Feed, Neural Brain-Metriken (Memory Seeds, Active Contexts), semantische Suche und Quick Actions (u. a. „Manual Memory Sync“).
-
-**Starten:** Neural Brain wie oben starten (Port 9124). Dashboard per HTTP ausliefern (z. B. aus dem Projektroot):
-
-```bash
-python3 -m http.server 8080
-# Dann im Browser: http://localhost:8080/web/dashboard.html
-```
-
-Oder aus dem `web/`-Ordner: `python3 -m http.server 8080` → `http://localhost:8080/dashboard.html`.
-
-- **Neural Brain-API:** Das Dashboard spricht mit `http://localhost:9124` (GET `/search`, GET `/stats`, POST `/seeds`, POST `/agent-contexts`). CORS ist am Neural Brain-Server aktiviert (`Access-Control-Allow-Origin: *`). **Bei CORS-Fehlern im Browser:** Neural Brain neu bauen und neu starten (`go build -o neural-brain . && ./neural-brain`).
-- **Agent-Status / Live-Feed:** Optional kann ein Status-Endpoint unter `http://localhost:3000/api/status` genutzt werden. Ist Port 3000 nicht belegt, erscheinen Mock-Agents und „—“ bei Win Rate / Cost / Tasks; die Neural Brain-Funktionen laufen unabhängig davon. Erwartetes JSON: `agents` (Array mit `name`, `emoji`, `status`, `currentTask`), `feed` oder `actions` (Array mit `timestamp`, `text`, `type`), optional `metrics` mit `winRate`, `monthlyCost`, `tasksToday`. Ist die URL nicht erreichbar, werden Platzhalter- bzw. Mock-Daten angezeigt.
 
 ## Projektstruktur
 
@@ -176,48 +113,16 @@ neural-brain/
 ├── go.mod, main.go
 ├── internal/
 │   ├── embed.go   # gte-go: Load, Embed, EmbedBatch
-│   ├── store.go   # pgvector: Insert, Search, Dedup, Counts
-│   └── handler.go # HTTP: /seeds, /search, /health, /stats, /agent-contexts
-├── web/
-│   └── dashboard.html   # Mission Control Dashboard (Single-Page)
+│   ├── store.go   # pgvector: Insert, Search, GetRecent, Counts
+│   └── api/       # API Handler für Seeds und Contexts
+├── backend/       # Vite React Frontend (Web-UI)
 ├── migrations/
-│   ├── 001_seeds.sql
-│   └── 002_agent_contexts.sql
-├── models/        # .gtemodel (nicht im Repo), Setup via scripts/setup-model.sh
+├── models/        # .gtemodel via setup-model.sh
 ├── scripts/
-│   └── setup-model.sh
-├── skills/
-│   └── neural-brain-memory/
-│       ├── scripts/
-│       │   └── neural-brain-memory.sh   # CLI: save, search, context-create/list/get
-│       └── hooks/   # Auto-Recall, Auto-Capture
-├── docker-compose.yml
-└── .env.example
+├── skills/        # AI Skills (Metriken, Auto-Learning, Emotion, Goals etc.)
+└── docker-compose.yml
 ```
 
-## CLI: neural-brain-memory.sh
+## Skills: CLI & Hintergrund-Jobs
 
-Das Script bietet die gleiche Nutzung wie das [Neutron-Guide](https://openclaw.vanarchain.com/guide-openclaw) (`neutron-memory.sh`), nur gegen die lokale Neural Brain-API. Basis-URL: `NEURAL_BRAIN_URL` (Standard: `http://localhost:9124`).
-
-```bash
-# Health-Check
-./scripts/neural-brain-memory.sh test
-
-# Memory speichern (content, optional tag)
-./scripts/neural-brain-memory.sh save "User prefers oat milk lattes from Blue Bottle every weekday morning" "User coffee preference"
-
-# Semantische Suche (query, optional limit default 30, optional threshold default 0.5)
-./scripts/neural-brain-memory.sh search "what do I know about blockchain" 10 0.5
-
-# Agent-Context anlegen
-./scripts/neural-brain-memory.sh context-create "my-agent" "episodic" '{"key":"value"}'
-
-# Contexts auflisten (agentId, optional memoryType)
-./scripts/neural-brain-memory.sh context-list "my-agent"
-./scripts/neural-brain-memory.sh context-list "my-agent" episodic
-
-# Einzelnen Context abrufen
-./scripts/neural-brain-memory.sh context-get <uuid>
-```
-
-Optional: `jq` für sicheres JSON-Escaping; ohne `jq` wird eine einfache Escaping-Logik verwendet.
+Das `skills/` Verzeichnis enthält eine Reihe von Shell-Skripten, die entweder interaktiv (wie `neural-brain-memory.sh`) oder als Hintergrund-Tasks (wie `auto-learning`, `emotion-engine`) agieren. Diese rufen OpenClaw-LLMs oder direkt die Neural Brain API auf. Alle können per OpenClaw YAML Konfiguration in den Agenten geladen werden.
