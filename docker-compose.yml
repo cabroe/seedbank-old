@@ -5,6 +5,7 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: neural-brain
       POSTGRES_PASSWORD: neural-brain
