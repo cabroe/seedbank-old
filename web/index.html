@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agent Mission Control — Seedbank</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --blue: #58a6ff;
+      --gray: #8b949e;
+      --purple: #a371f7;
+      --glow: rgba(88, 166, 255, 0.15);
+      --font-mono: "SF Mono", "Consolas", "Liberation Mono", monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    /* ——— Search ——— */
+    .search-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1rem;
+    }
+
+    .search-bar input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.6rem 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      border-radius: 4px;
+    }
+
+    .search-bar input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-bar input:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px var(--glow);
+    }
+
+    .search-bar button {
+      background: var(--blue);
+      color: var(--bg);
+      border: none;
+      padding: 0.6rem 1.2rem;
+      font-family: var(--font-sans);
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .search-bar button:hover {
+      opacity: 0.9;
+    }
+
+    /* ——— Metrics ——— */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+    }
+
+    .metric .label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .metric .value {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    /* ——— Grid: Agents + Feed ——— */
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(320px, 2fr);
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 800px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ——— Agent cards ——— */
+    .section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .agents {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .agent-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.9rem 1rem;
+    }
+
+    .agent-card .head {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .agent-card .emoji {
+      font-size: 1.2rem;
+    }
+
+    .agent-card .name {
+      font-weight: 600;
+    }
+
+    .agent-card .status {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      margin-left: auto;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+    }
+
+    .agent-card .status.online {
+      background: rgba(63, 185, 80, 0.2);
+      color: var(--green);
+    }
+
+    .agent-card .status.busy {
+      background: rgba(248, 81, 73, 0.2);
+      color: var(--red);
+    }
+
+    .agent-card .status.offline {
+      background: rgba(139, 148, 158, 0.2);
+      color: var(--gray);
+    }
+
+    .agent-card .task {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    /* ——— Live feed ——— */
+    .feed-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      min-height: 200px;
+    }
+
+    .feed-tape {
+      padding: 0.75rem;
+      max-height: 320px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .feed-item {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+    }
+
+    .feed-item:last-child {
+      border-bottom: none;
+    }
+
+    .feed-item .ts {
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .feed-item .text {
+      flex: 1;
+      word-break: break-word;
+    }
+
+    .feed-item.type-win .text {
+      color: var(--green);
+    }
+
+    .feed-item.type-loss .text {
+      color: var(--red);
+    }
+
+    .feed-item.type-content .text {
+      color: var(--blue);
+    }
+
+    .feed-item.type-system .text {
+      color: var(--gray);
+    }
+
+    .feed-item.type-memory_captured .text,
+    .feed-item.type-context_synced .text {
+      color: var(--purple);
+    }
+
+    /* ——— Quick actions ——— */
+    .quick-actions {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .quick-actions .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .quick-actions button {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.5rem 1rem;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .quick-actions button:hover {
+      border-color: var(--blue);
+      background: rgba(88, 166, 255, 0.08);
+    }
+
+    .quick-actions button.primary {
+      background: var(--purple);
+      color: var(--bg);
+      border-color: var(--purple);
+    }
+
+    .quick-actions button.primary:hover {
+      opacity: 0.9;
+    }
+
+    /* ——— Modal (search results) ——— */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      max-width: 560px;
+      width: 100%;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal h3 {
+      margin: 0;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1rem;
+    }
+
+    .modal .body {
+      padding: 1rem 1.25rem;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+
+    .modal .result-item {
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(48, 54, 61, 0.6);
+    }
+
+    .modal .result-item:last-child {
+      border-bottom: none;
+    }
+
+    .modal .score {
+      color: var(--green);
+      margin-bottom: 0.25rem;
+    }
+
+    .modal .content {
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .modal .meta {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+    }
+
+    .modal .close {
+      align-self: flex-end;
+      margin: 1rem 1.25rem;
+      padding: 0.4rem 0.8rem;
+      background: var(--border);
+      color: var(--text);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .modal .empty {
+      color: var(--text-muted);
+    }
+
+    .modal .error {
+      color: var(--red);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Semantic search -->
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Query long-term memory (semantic search)…" autocomplete="off">
+      <button type="button" id="searchBtn">Search</button>
+    </div>
+
+    <!-- Metrics (Seedbank only) -->
+    <div class="metrics">
+      <div class="metric">
+        <div class="label">Memory Seeds</div>
+        <div class="value" id="metricSeeds">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">Active Contexts</div>
+        <div class="value" id="metricContexts">—</div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <!-- Agents by context (from Seedbank) -->
+      <div>
+        <div class="section-title">Agents (by context)</div>
+        <div class="agents" id="agents"></div>
+      </div>
+      <!-- Memory stream: recent contexts + local events -->
+      <div>
+        <div class="section-title">Memory Stream</div>
+        <div class="feed-wrap">
+          <div class="feed-tape" id="feedTape"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="quick-actions">
+      <div class="section-title">Quick Actions</div>
+      <div class="buttons">
+        <button type="button" class="primary" id="btnManualSync">Manual Memory Sync</button>
+        <button type="button" id="btnRefresh">Refresh All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search results modal -->
+  <div class="modal-overlay" id="searchModal">
+    <div class="modal">
+      <h3 id="searchModalTitle">Search results</h3>
+      <div class="body" id="searchModalBody"></div>
+      <button type="button" class="close" id="searchModalClose">Close</button>
+    </div>
+  </div>
+
+  <script>
+    const SEEDBANK_URL = '';
+
+    const feedByType = {
+      memory_captured: 'type-memory_captured',
+      context_synced: 'type-context_synced',
+      context: 'type-content',
+      system: 'type-system',
+      loss: 'type-loss'
+    };
+
+    let localFeed = [];
+    let lastContexts = [];
+
+    function el(id) { return document.getElementById(id); }
+
+    function formatTs(ts) {
+      if (!ts) return '--:--:--';
+      const d = new Date(ts);
+      return isNaN(d.getTime()) ? String(ts) : d.toLocaleTimeString('en-GB', { hour12: false });
+    }
+
+    async function fetchStats() {
+      try {
+        const r = await fetch(SEEDBANK_URL + '/stats');
+        if (!r.ok) throw new Error(r.statusText);
+        return await r.json();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function fetchAgentContexts() {
+      try {
+        const r = await fetch(SEEDBANK_URL + '/agent-contexts');
+        if (!r.ok) throw new Error(r.statusText);
+        return await r.json();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function fetchSearch(q, limit = 20) {
+      const url = SEEDBANK_URL + '/search?q=' + encodeURIComponent(q) + '&limit=' + limit;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    }
+
+    async function postSeed(content, metadata = {}) {
+      const r = await fetch(SEEDBANK_URL + '/seeds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, metadata })
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    }
+
+    async function postAgentContext(agentId, memoryType, payload = {}) {
+      const r = await fetch(SEEDBANK_URL + '/agent-contexts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, memoryType, payload })
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    }
+
+    function renderAgents(contexts) {
+      const container = el('agents');
+      if (!contexts || !contexts.length) {
+        container.innerHTML = '<div class="agent-card"><div class="task">No agent contexts in Seedbank yet</div></div>';
+        return;
+      }
+      const byAgent = {};
+      contexts.forEach(c => {
+        const id = c.agentId || '(unknown)';
+        if (!byAgent[id]) byAgent[id] = { episodic: 0, semantic: 0, procedural: 0, working: 0 };
+        const t = (c.memoryType || '').toLowerCase();
+        if (byAgent[id][t] !== undefined) byAgent[id][t]++;
+      });
+      const entries = Object.entries(byAgent).sort((a, b) => {
+        const totalA = Object.values(a[1]).reduce((s, n) => s + n, 0);
+        const totalB = Object.values(b[1]).reduce((s, n) => s + n, 0);
+        return totalB - totalA;
+      });
+      container.innerHTML = entries.map(([agentId, counts]) => {
+        const total = Object.values(counts).reduce((s, n) => s + n, 0);
+        const parts = ['episodic', 'semantic', 'procedural', 'working']
+          .filter(t => counts[t] > 0)
+          .map(t => t + ': ' + counts[t]);
+        return `
+          <div class="agent-card">
+            <div class="head">
+              <span class="name">${escapeHtml(agentId)}</span>
+              <span class="status online">${total} context${total !== 1 ? 's' : ''}</span>
+            </div>
+            <div class="task">${escapeHtml(parts.join(' · ') || '—')}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function buildFeed(contexts) {
+      const items = [...localFeed];
+      if (contexts && contexts.length) {
+        contexts.slice(-80).forEach(c => {
+          const ts = c.createdAt || c.created_at || '';
+          const payload = (c.payload && typeof c.payload === 'object') ? JSON.stringify(c.payload).slice(0, 80) : (c.payload || '');
+          items.push({
+            timestamp: ts,
+            text: `[${c.agentId || '?'}] ${c.memoryType || '?'}: ${payload}${payload.length >= 80 ? '…' : ''}`,
+            type: 'context'
+          });
+        });
+      }
+      items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      return items.slice(0, 100);
+    }
+
+    function renderFeed(items) {
+      const tape = el('feedTape');
+      if (!items || !items.length) {
+        tape.innerHTML = '<div class="feed-item type-system"><span class="ts">--</span><span class="text">No events yet</span></div>';
+        return;
+      }
+      tape.innerHTML = items.map(it => {
+        const type = feedByType[it.type] || 'type-system';
+        return `<div class="feed-item ${type}"><span class="ts">${formatTs(it.timestamp)}</span><span class="text">${escapeHtml(it.text || '')}</span></div>`;
+      }).join('');
+    }
+
+    function updateMetrics(stats) {
+      el('metricSeeds').textContent = stats && typeof stats.seedsCount === 'number' ? String(stats.seedsCount) : '—';
+      el('metricContexts').textContent = stats && typeof stats.agentContextsCount === 'number' ? String(stats.agentContextsCount) : '—';
+    }
+
+    async function loadAll() {
+      const [stats, contexts] = await Promise.all([fetchStats(), fetchAgentContexts()]);
+      lastContexts = contexts || [];
+      renderAgents(lastContexts);
+      renderFeed(buildFeed(lastContexts));
+      updateMetrics(stats);
+    }
+
+    // Search
+    el('searchBtn').addEventListener('click', doSearch);
+    el('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+    async function doSearch() {
+      const q = el('searchInput').value.trim();
+      if (!q) return;
+      el('searchModalTitle').textContent = 'Search: "' + escapeHtml(q) + '"';
+      el('searchModalBody').innerHTML = '<div class="empty">Loading…</div>';
+      el('searchModal').classList.add('open');
+      try {
+        const results = await fetchSearch(q);
+        if (!results || !results.length) {
+          el('searchModalBody').innerHTML = '<div class="empty">No results.</div>';
+          return;
+        }
+        el('searchModalBody').innerHTML = results.map(r => `
+          <div class="result-item">
+            <div class="score">Cosine similarity: ${typeof r.score === 'number' ? r.score.toFixed(4) : '—'}</div>
+            <div class="content">${escapeHtml(r.content || '')}</div>
+            <div class="meta">id: ${r.id}${r.created_at ? ' · ' + r.created_at : ''}</div>
+          </div>
+        `).join('');
+      } catch (e) {
+        el('searchModalBody').innerHTML = '<div class="error">' + escapeHtml(e.message) + '</div>';
+      }
+    }
+
+    el('searchModalClose').addEventListener('click', () => el('searchModal').classList.remove('open'));
+    el('searchModal').addEventListener('click', e => { if (e.target === el('searchModal')) el('searchModal').classList.remove('open'); });
+
+    // Manual Memory Sync: POST /seeds then optionally POST /agent-contexts; add purple feed entries
+    el('btnManualSync').addEventListener('click', async () => {
+      const content = 'Manual memory sync from Mission Control at ' + new Date().toISOString();
+      const ts = new Date().toISOString();
+      try {
+        const res = await postSeed(content, { source: 'mission-control-dashboard' });
+        localFeed.unshift({
+          timestamp: ts,
+          text: 'Memory Captured: ' + content.slice(0, 60) + (content.length > 60 ? '…' : ''),
+          type: 'memory_captured'
+        });
+        try {
+          await postAgentContext('mission-control', 'episodic', { note: content.slice(0, 200) });
+          localFeed.unshift({
+            timestamp: ts,
+            text: 'Context Synced: episodic snapshot from Mission Control',
+            type: 'context_synced'
+          });
+        } catch (_) { /* optional */ }
+        renderFeed(buildFeed(lastContexts));
+        updateMetrics(await fetchStats());
+      } catch (e) {
+        localFeed.unshift({ timestamp: ts, text: 'Memory sync failed: ' + e.message, type: 'loss' });
+        renderFeed(buildFeed(lastContexts));
+      }
+    });
+
+    el('btnRefresh').addEventListener('click', () => loadAll());
+
+    loadAll();
+    setInterval(loadAll, 15000);
+  </script>
+</body>
+
+</html>

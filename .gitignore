@@ -1,0 +1,6 @@
+/seedbank
+.env
+.venv/
+models/*.gtemodel
+models/gte-small/
+scripts/convert_model.py

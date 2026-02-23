@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS Neural Terminal</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0e14;
+      color: #00ff00;
+      font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+      padding: 1rem;
+      min-height: 100vh;
+    }
+
+    .terminal {
+      background: #000;
+      border: 1px solid #1a3a1a;
+      border-radius: 8px;
+      padding: 1rem;
+      height: calc(100vh - 2rem);
+      overflow-y: auto;
+    }
+
+    .header {
+      border-bottom: 1px solid #1a3a1a;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 1rem;
+      color: #00ff00;
+    }
+
+    .status {
+      font-size: 0.75rem;
+      color: #00aa00;
+    }
+
+    .log-entry {
+      margin: 0.25rem 0;
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+
+    .log-entry .time {
+      color: #006600;
+    }
+
+    .log-entry .type {
+      color: #00ff00;
+    }
+
+    .log-entry .type-new {
+      color: #00ffff;
+    }
+
+    .log-entry .type-link {
+      color: #ffff00;
+    }
+
+    .log-entry .type-cat {
+      color: #ff00ff;
+    }
+
+    .log-entry .source {
+      color: #00aa00;
+    }
+
+    .log-entry .target {
+      color: #00aaff;
+    }
+
+    .stats {
+      border-top: 1px solid #1a3a1a;
+      padding-top: 0.5rem;
+      margin-top: 0.5rem;
+      display: flex;
+      gap: 2rem;
+      font-size: 0.75rem;
+    }
+
+    .stat {
+      color: #00aa00;
+    }
+
+    .stat span {
+      color: #00ff00;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="terminal">
+    <div class="header">
+      <h1>🦞 JARVIS Neural Terminal</h1>
+      <div class="status" id="status">● Live</div>
+    </div>
+    <div id="log"></div>
+    <div class="stats">
+      <div class="stat">Neuronen: <span id="nodeCount">0</span></div>
+      <div class="stat">Synapsen: <span id="linkCount">0</span></div>
+      <div class="stat">Events: <span id="eventCount">0</span></div>
+      <div class="stat">Letzte Aktualisierung: <span id="lastUpdate">--</span></div>
+    </div>
+  </div>
+
+  <script>
+    const API = '';
+    let lastSeedIds = [];
+    let lastLinkCount = 0;
+    let eventCount = 0;
+    let oldNodes = [];
+
+    const logEl = document.getElementById('log');
+
+    function log(msg, type = '') {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const time = new Date().toLocaleTimeString();
+      entry.innerHTML = `<span class="time">[${time}]</span> ${msg}`;
+      logEl.insertBefore(entry, logEl.firstChild);
+      eventCount++;
+      document.getElementById('eventCount').textContent = eventCount;
+    }
+
+    function logLink(source, target, sourceCat, targetCat) {
+      const msg = `<span class="type type-link">[SYNAPSE]</span> <span class="source">${sourceCat}</span> → <span class="target">${targetCat}</span>`;
+      log(msg);
+    }
+
+    function logNewNode(id, category, content) {
+      const preview = content.substring(0, 50) + '...';
+      const msg = `<span class="type type-new">[NEU]</span> Neuron #${id} (${category}): ${preview}`;
+      log(msg);
+    }
+
+    function logCategoryChange(id, oldCat, newCat) {
+      const msg = `<span class="type type-cat">[KATEGORIE]</span> Neuron #${id}: ${oldCat} → ${newCat}`;
+      log(msg);
+    }
+
+    async function checkUpdates() {
+      try {
+        const res = await fetch(API + '/seeds/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: 'der', limit: 100, threshold: 0 })
+        });
+        const data = await res.json();
+        const seeds = data.results || [];
+
+        const currentSeedIds = seeds.map(s => s.seedId).sort();
+
+        // Check for new seeds
+        const newIds = currentSeedIds.filter(id => !lastSeedIds.includes(id));
+        if (newIds.length > 0) {
+          newIds.forEach(id => {
+            const seed = seeds.find(s => s.seedId === id);
+            if (seed) {
+              const cat = detectCategory(seed.content);
+              logNewNode(id, cat, seed.content);
+            }
+          });
+        }
+
+        // Update display
+        document.getElementById('nodeCount').textContent = seeds.length;
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+
+        // Update link count
+        const linkCount = Math.floor(seeds.length * 1.5); // Approximate
+        document.getElementById('linkCount').textContent = linkCount;
+
+        lastSeedIds = currentSeedIds;
+
+      } catch (e) {
+        log(`<span style="color:red">ERROR: ${e.message}</span>`);
+      }
+
+      setTimeout(checkUpdates, 5000);
+    }
+
+    function detectCategory(text) {
+      const t = text.toLowerCase();
+      if (t.includes('carsten') || t.includes('geburtstag') || t.includes('wohnort') || t.includes('arbeit') || t.includes('kastner')) return 'Carsten';
+      if (t.includes('jarvis') || t.includes('identität') || t.includes('aufgaben') || t.includes('schicksal')) return 'JARVIS';
+      if (t.includes('regel') || t.includes('fakt') || t.includes('ehrlich') || t.includes('lügen')) return 'Regeln';
+      if (t.includes('skill') || t.includes('react') || t.includes('golang') || t.includes('programm')) return 'Skills';
+      if (t.includes('projekt') || t.includes('weiberwirtschaft') || t.includes('vercel')) return 'Projekt';
+      if (t.includes('workflow') || t.includes('plan') || t.includes('subagent')) return 'Workflow';
+      return 'User';
+    }
+
+    // Initial log
+    log('<span class="type">[START]</span> JARVIS Neural Terminal gestartet');
+    log('<span class="type">[INFO]</span> Live-Monitoring aktiv (5s Interval)');
+
+    // Start monitoring
+    checkUpdates();
+  </script>
+</body>
+
+</html>

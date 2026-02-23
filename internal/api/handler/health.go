@@ -1,0 +1,56 @@
+package handler
+
+import (
+	"context"
+	"net/http"
+
+	apilib "github.com/cabroe/seedbank/internal/api"
+	"github.com/cabroe/seedbank/internal/store"
+	"github.com/cabroe/seedbank/internal/model"
+)
+
+// HealthPinger is implemented by *pgxpool.Pool for health checks.
+type HealthPinger interface {
+	Ping(ctx context.Context) error
+}
+
+// HandleStats handles GET /stats: returns seedsCount and agentContextsCount for the dashboard.
+func HandleStats(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			apilib.RespondError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+		seedsCount, err := s.SeedsCount(r.Context())
+		if err != nil {
+			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		contextsCount, err := s.AgentContextsCount(r.Context())
+		if err != nil {
+			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		apilib.RespondJSON(w, http.StatusOK, map[string]int64{"seedsCount": seedsCount, "agentContextsCount": contextsCount})
+	}
+}
+
+// HandleHealth returns 200 if service is ready (model + DB).
+func HandleHealth(pool HealthPinger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if model.Model() == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("model not loaded"))
+			return
+		}
+		if pool != nil {
+			if err := pool.Ping(r.Context()); err != nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				w.Write([]byte("database unreachable"))
+				return
+			}
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	}
+}
