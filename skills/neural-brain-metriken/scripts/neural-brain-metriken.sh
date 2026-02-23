@@ -11,9 +11,9 @@ echo "=== Metriken ==="
 
 # 1. Seeds zählen
 STATS=$(curl -s "${BASE_URL}/stats")
-SEEDS=$(echo "$STATS" | jq -r '.seedsCount' 2>/dev/null || echo "0")
+SEEDS=$(echo "$STATS" | jq -r '.seeds' 2>/dev/null || echo "0")
 if [ "$SEEDS" = "null" ] || [ -z "$SEEDS" ]; then SEEDS=0; fi
-CONTEXTS=$(echo "$STATS" | jq -r '.agentContextsCount' 2>/dev/null || echo "0")
+CONTEXTS=$(echo "$STATS" | jq -r '.agent_contexts' 2>/dev/null || echo "0")
 if [ "$CONTEXTS" = "null" ] || [ -z "$CONTEXTS" ]; then CONTEXTS=0; fi
 
 echo "Seeds: $SEEDS, Contexts: $CONTEXTS"

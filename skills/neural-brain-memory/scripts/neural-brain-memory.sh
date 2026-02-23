@@ -48,18 +48,30 @@ case "${1:-}" in
         query="$2"
         limit="${3:-10}"
         threshold="${4:-0.5}"
+        seed_ids="${5:-}"
         if [[ -z "$query" ]]; then
-            echo "Usage: neural-brain-memory search QUERY [LIMIT] [THRESHOLD]"
+            echo "Usage: neural-brain-memory search QUERY [LIMIT] [THRESHOLD] [SEED_IDS]"
+            echo "Example: neural-brain-memory search \"hello\" 10 0.5 \"1,2,3\""
             exit 1
         fi
+        
+        # Build JSON body
+        if [[ -n "$seed_ids" ]]; then
+            # Convert comma-separated string to JSON array
+            json_ids=$(echo "$seed_ids" | jq -R 'split(",") | map(tonumber)' 2>/dev/null || echo "[]")
+            payload="{\"query\":\"${query}\",\"limit\":${limit},\"threshold\":${threshold},\"seedIds\":${json_ids}}"
+        else
+            payload="{\"query\":\"${query}\",\"limit\":${limit},\"threshold\":${threshold}}"
+        fi
+
         if [[ -n "$QUERY_PARAMS" ]]; then
             curl -s -X POST "${BASE_URL}/seeds/query?${QUERY_PARAMS}" \
                 -H "Content-Type: application/json" \
-                -d "{\"query\":\"${query}\",\"limit\":${limit},\"threshold\":${threshold}}" | format_json
+                -d "$payload" | format_json
         else
             curl -s -X POST "${BASE_URL}/seeds/query" \
                 -H "Content-Type: application/json" \
-                -d "{\"query\":\"${query}\",\"limit\":${limit},\"threshold\":${threshold}}" | format_json
+                -d "$payload" | format_json
         fi
         ;;
     context-create)
@@ -133,8 +145,8 @@ case "${1:-}" in
         echo "Usage: neural-brain-memory [command] [args]"
         echo ""
         echo "Seed Commands:"
-        echo "  save TEXT [TITLE]                         Save text as a seed"
-        echo "  search QUERY [LIMIT] [THRESHOLD]          Semantic search on seeds"
+        echo "  save TEXT [TITLE]                                 Save text as a seed"
+        echo "  search QUERY [LIMIT] [THRESHOLD] [SEED_IDS]       Semantic search (optional seedIds filter)"
         echo ""
         echo "Agent Context Commands:"
         echo "  context-create AGENT_ID TYPE JSON_DATA [JSON_METADATA]"
@@ -150,6 +162,7 @@ case "${1:-}" in
         echo "Examples:"
         echo "  neural-brain-memory save \"Hello world\" \"My first seed\""
         echo "  neural-brain-memory search \"hello\" 10 0.5"
+        echo "  neural-brain-memory search \"hello\" 10 0.5 \"1,2\""
         echo "  neural-brain-memory context-create \"my-agent\" \"episodic\" '{\"key\":\"value\"}'"
         echo "  neural-brain-memory context-list \"my-agent\""
         echo "  neural-brain-memory context-get abc-123"

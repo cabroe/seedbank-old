@@ -16,15 +16,14 @@ format_json() {
 case "${1:-}" in
     gather)
         hours="${2:-24}"
-        # We search with a generic query to get recent seeds, then we use jq to filter by date.
-        # This is a bit brute-force, ideally search API natively supports time ranges.
         limit=50
-        echo "Gathering short-term memory from the last $hours hours..." >&2
+        echo "Gathering recent memories from the last $hours hours..." >&2
         
         # Calculate timestamp X hours ago
         cutoff=$(date -d "-${hours} hours" -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -v-${hours}H -u +"%Y-%m-%dT%H:%M:%SZ")
         
-        result=$(curl -s "${BASE_URL}/search?q=*&limit=${limit}")
+        # Using GET /seeds/recent is more efficient than a full vector search for gathering chronological history
+        result=$(curl -s "${BASE_URL}/seeds/recent?limit=${limit}")
             
         # Filter and cleanly format the output for an LLM prompt
         # Ignore system-generated seeds (metrik, learning) to prevent AI feedback loops

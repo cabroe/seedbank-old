@@ -9,7 +9,7 @@ This skill provides a simple bash-based CLI to interact with the core Neural Bra
 
 ## Scripts
 - `bash {baseDir}/scripts/neural-brain-memory.sh`:
-  - Provide a command line interface wrap around Neural Brain's `POST /agent-contexts` and `GET /search` functionality.
+  - Provide a command line interface wrap around Neural Brain's `POST /agent-contexts` and `GET /search` functionality (including `seedId` filtering).
 
 ## Usage Guidelines
 - Useful for generalized data logging or testing backend connectivity.
