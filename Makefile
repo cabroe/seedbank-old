@@ -2,18 +2,18 @@
 
 help:
 	@echo "=== Neural Brain Makefile ==="
-	@echo "  make build      - Baut das Frontend (Vite) und das Backend (Go)"
-	@echo "  make run        - Baut das Projekt und führt den Server im Vordergrund aus"
-	@echo "  make dev        - Startet das Frontend im Dev-Modus (Hot-Reloading)"
-	@echo "  make db-up      - Startet die Postgres-Datenbank via Docker"
-	@echo "  make db-down    - Stoppt die Postgres-Datenbank"
-	@echo "  make db-clean   - Löscht Docker-Container & Images (Daten/Volumes bleiben erhalten)"
-	@echo "  make db-logs    - Zeigt die Live-Logs der Datenbank"
-	@echo "  make install    - Baut Projekt, installiert systemd-Dienst & kopiert Skills"
+	@echo "  make build          - Baut das Frontend (Vite) und das Backend (Go)"
+	@echo "  make run            - Baut das Projekt und führt den Server im Vordergrund aus"
+	@echo "  make dev            - Startet das Frontend im Dev-Modus (Hot-Reloading)"
+	@echo "  make db-up          - Startet die Postgres-Datenbank via Docker"
+	@echo "  make db-down        - Stoppt die Postgres-Datenbank"
+	@echo "  make db-clean       - Löscht Docker-Container & Images (Daten/Volumes bleiben erhalten)"
+	@echo "  make db-logs        - Zeigt die Live-Logs der Datenbank"
+	@echo "  make install        - Baut Projekt, installiert systemd-Dienst & kopiert Skills"
 	@echo "  make install-skills - Kopiert die Skills in das OpenClaw-Verzeichnis"
-	@echo "  make logs       - Zeigt die Live-Logs des systemd-Dienstes"
-	@echo "  make clean      - Stoppt den Dienst, löscht Binary und Build-Dateien"
-	@echo "  make status     - Zeigt den Status von Dienst, API und Datenbank"
+	@echo "  make logs           - Zeigt die Live-Logs des systemd-Dienstes"
+	@echo "  make clean          - Stoppt den Dienst, löscht Binary und Build-Dateien"
+	@echo "  make status         - Zeigt den Status von Dienst, API und Datenbank"
 
 db-up:
 	docker compose up -d
