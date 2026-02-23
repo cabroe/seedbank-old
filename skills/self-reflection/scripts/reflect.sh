@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Meta-Cognition CLI - Self-Reflection via Seedbank API
+# Meta-Cognition CLI - Self-Reflection via Neural Brain API
 # Usage: ./reflect.sh <command> [args...]
 
-BASE_URL="${SEEDBANK_URL:-http://localhost:9124}"
+BASE_URL="${NEURAL_BRAIN_URL:-http://localhost:9124}"
 
 # Format JSON safely using jq
 format_json() {

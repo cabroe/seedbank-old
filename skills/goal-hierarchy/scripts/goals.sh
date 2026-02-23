@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Goal Management CLI - Intrinsic Motivation via Seedbank API
+# Goal Management CLI - Intrinsic Motivation via Neural Brain API
 # Usage: ./goals.sh <command> [args...]
 
-BASE_URL="${SEEDBANK_URL:-http://localhost:9124}"
+BASE_URL="${NEURAL_BRAIN_URL:-http://localhost:9124}"
 
 case "${1:-}" in
     add)

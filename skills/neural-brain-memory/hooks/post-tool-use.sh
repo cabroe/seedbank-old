@@ -2,10 +2,10 @@
 # Auto-Capture: Save conversation after AI turn (Neutron-compatible: POST /seeds multipart)
 
 # Check if auto-capture is enabled (default: true) — support both env names
-VANAR_AUTO_CAPTURE="${VANAR_AUTO_CAPTURE:-${SEEDBANK_AUTO_CAPTURE:-true}}"
+VANAR_AUTO_CAPTURE="${VANAR_AUTO_CAPTURE:-${NEURAL_BRAIN_AUTO_CAPTURE:-true}}"
 [[ "$VANAR_AUTO_CAPTURE" != "true" ]] && exit 0
 
-BASE_URL="${SEEDBANK_URL:-http://localhost:9124}"
+BASE_URL="${NEURAL_BRAIN_URL:-http://localhost:9124}"
 APP_ID="${NEUTRON_AGENT_ID:-}"
 EXTERNAL_USER_ID="${YOUR_AGENT_IDENTIFIER:-1}"
 

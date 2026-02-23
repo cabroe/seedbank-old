@@ -1,0 +1,10 @@
+{
+    "name": "neural-brain-root",
+    "private": true,
+    "scripts": {
+        "dev": "npm run dev --prefix backend",
+        "build": "npm run build --prefix backend",
+        "install": "npm install --prefix backend",
+        "lint": "npm run lint --prefix backend"
+    }
+}

@@ -1,4 +1,4 @@
-# Seedbank
+# Neural Brain
 
 Minimaler, lokaler semantischer Speicher für OpenClaw: Go + pgvector + GTE-Small (gte-go). Ein Prozess, ~70 MB Modell, kein Python/Ollama zur Laufzeit.
 
@@ -18,7 +18,7 @@ Minimaler, lokaler semantischer Speicher für OpenClaw: Go + pgvector + GTE-Smal
 docker compose up -d
 ```
 
-Verbindung: `postgres://seedbank:seedbank@localhost:5433/seedbank?sslmode=disable`
+Verbindung: `postgres://neural-brain:neural-brain@localhost:5433/neural-brain?sslmode=disable`
 
 ### 2. GTE-Small-Modell erzeugen (einmalig)
 
@@ -40,8 +40,8 @@ cp .env.example .env
 ### 4. Server starten
 
 ```bash
-go build -o seedbank .
-./seedbank
+go build -o neural-brain .
+./neural-brain
 ```
 
 Standard-Port: **9124**.
@@ -55,21 +55,21 @@ make up                              # Postgres (pgvector) starten
 ./scripts/setup-model.sh             # GTE-Modell einmalig erzeugen
 make env                             # .env aus .env.example anlegen
 mkdir -p ~/.config/systemd/user
-cp seedbank.service ~/.config/systemd/user/
+cp neural-brain.service ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now seedbank
-# Status: systemctl --user status seedbank
+systemctl --user enable --now neural-brain
+# Status: systemctl --user status neural-brain
 ```
 
-Bei Exit-Code 1: `journalctl --user -u seedbank -n 50 --no-pager` zeigt die Fehlermeldung (z. B. Modell fehlt, DB nicht erreichbar). Die Unit lädt optional `.env` (`EnvironmentFile=-...`); fehlt die Datei, nutzt der Prozess seine Defaults.
+Bei Exit-Code 1: `journalctl --user -u neural-brain -n 50 --no-pager` zeigt die Fehlermeldung (z. B. Modell fehlt, DB nicht erreichbar). Die Unit lädt optional `.env` (`EnvironmentFile=-...`); fehlt die Datei, nutzt der Prozess seine Defaults.
 
-Die Unit nutzt `%h` (= dein Home); bei anderem Projektpfad die Pfade in `seedbank.service` anpassen.
+Die Unit nutzt `%h` (= dein Home); bei anderem Projektpfad die Pfade in `neural-brain.service` anpassen.
 
 ## Umgebungsvariablen
 
 | Variable          | Default                                      | Beschreibung |
 |-------------------|----------------------------------------------|--------------|
-| `DATABASE_URL`    | `postgres://seedbank:seedbank@localhost:5433/seedbank?sslmode=disable` | PostgreSQL + pgvector |
+| `DATABASE_URL`    | `postgres://neural-brain:neural-brain@localhost:5433/neural-brain?sslmode=disable` | PostgreSQL + pgvector |
 | `GTE_MODEL_PATH`  | `./models/gte-small.gtemodel`                 | Pfad zum .gtemodel |
 | `PORT`            | `9124`                                       | HTTP-Port |
 | `DEDUP_THRESHOLD` | `0` (deaktiviert)                            | Wenn gesetzt (z. B. 0.92): Seeds mit Cosine-Similarity ≥ Schwellwert werden nicht erneut eingefügt |
@@ -155,9 +155,9 @@ Antwort: `{"seedsCount": 42, "agentContextsCount": 7}`.
 
 ## Mission Control Dashboard
 
-Ein einseitiges **AI Agent Mission Control Dashboard** (Dark Theme, „Bloomberg Terminal meets Gaming HUD“) liegt unter `web/dashboard.html`. Es zeigt Agent-Status, Live-Feed, Seedbank-Metriken (Memory Seeds, Active Contexts), semantische Suche und Quick Actions (u. a. „Manual Memory Sync“).
+Ein einseitiges **AI Agent Mission Control Dashboard** (Dark Theme, „Bloomberg Terminal meets Gaming HUD“) liegt unter `web/dashboard.html`. Es zeigt Agent-Status, Live-Feed, Neural Brain-Metriken (Memory Seeds, Active Contexts), semantische Suche und Quick Actions (u. a. „Manual Memory Sync“).
 
-**Starten:** Seedbank wie oben starten (Port 9124). Dashboard per HTTP ausliefern (z. B. aus dem Projektroot):
+**Starten:** Neural Brain wie oben starten (Port 9124). Dashboard per HTTP ausliefern (z. B. aus dem Projektroot):
 
 ```bash
 python3 -m http.server 8080
@@ -166,13 +166,13 @@ python3 -m http.server 8080
 
 Oder aus dem `web/`-Ordner: `python3 -m http.server 8080` → `http://localhost:8080/dashboard.html`.
 
-- **Seedbank-API:** Das Dashboard spricht mit `http://localhost:9124` (GET `/search`, GET `/stats`, POST `/seeds`, POST `/agent-contexts`). CORS ist am Seedbank-Server aktiviert (`Access-Control-Allow-Origin: *`). **Bei CORS-Fehlern im Browser:** Seedbank neu bauen und neu starten (`go build -o seedbank . && ./seedbank`).
-- **Agent-Status / Live-Feed:** Optional kann ein Status-Endpoint unter `http://localhost:3000/api/status` genutzt werden. Ist Port 3000 nicht belegt, erscheinen Mock-Agents und „—“ bei Win Rate / Cost / Tasks; die Seedbank-Funktionen laufen unabhängig davon. Erwartetes JSON: `agents` (Array mit `name`, `emoji`, `status`, `currentTask`), `feed` oder `actions` (Array mit `timestamp`, `text`, `type`), optional `metrics` mit `winRate`, `monthlyCost`, `tasksToday`. Ist die URL nicht erreichbar, werden Platzhalter- bzw. Mock-Daten angezeigt.
+- **Neural Brain-API:** Das Dashboard spricht mit `http://localhost:9124` (GET `/search`, GET `/stats`, POST `/seeds`, POST `/agent-contexts`). CORS ist am Neural Brain-Server aktiviert (`Access-Control-Allow-Origin: *`). **Bei CORS-Fehlern im Browser:** Neural Brain neu bauen und neu starten (`go build -o neural-brain . && ./neural-brain`).
+- **Agent-Status / Live-Feed:** Optional kann ein Status-Endpoint unter `http://localhost:3000/api/status` genutzt werden. Ist Port 3000 nicht belegt, erscheinen Mock-Agents und „—“ bei Win Rate / Cost / Tasks; die Neural Brain-Funktionen laufen unabhängig davon. Erwartetes JSON: `agents` (Array mit `name`, `emoji`, `status`, `currentTask`), `feed` oder `actions` (Array mit `timestamp`, `text`, `type`), optional `metrics` mit `winRate`, `monthlyCost`, `tasksToday`. Ist die URL nicht erreichbar, werden Platzhalter- bzw. Mock-Daten angezeigt.
 
 ## Projektstruktur
 
 ```
-seedbank/
+neural-brain/
 ├── go.mod, main.go
 ├── internal/
 │   ├── embed.go   # gte-go: Load, Embed, EmbedBatch
@@ -187,37 +187,37 @@ seedbank/
 ├── scripts/
 │   └── setup-model.sh
 ├── skills/
-│   └── seedbank-memory/
+│   └── neural-brain-memory/
 │       ├── scripts/
-│       │   └── seedbank-memory.sh   # CLI: save, search, context-create/list/get
+│       │   └── neural-brain-memory.sh   # CLI: save, search, context-create/list/get
 │       └── hooks/   # Auto-Recall, Auto-Capture
 ├── docker-compose.yml
 └── .env.example
 ```
 
-## CLI: seedbank-memory.sh
+## CLI: neural-brain-memory.sh
 
-Das Script bietet die gleiche Nutzung wie das [Neutron-Guide](https://openclaw.vanarchain.com/guide-openclaw) (`neutron-memory.sh`), nur gegen die lokale Seedbank-API. Basis-URL: `SEEDBANK_URL` (Standard: `http://localhost:9124`).
+Das Script bietet die gleiche Nutzung wie das [Neutron-Guide](https://openclaw.vanarchain.com/guide-openclaw) (`neutron-memory.sh`), nur gegen die lokale Neural Brain-API. Basis-URL: `NEURAL_BRAIN_URL` (Standard: `http://localhost:9124`).
 
 ```bash
 # Health-Check
-./scripts/seedbank-memory.sh test
+./scripts/neural-brain-memory.sh test
 
 # Memory speichern (content, optional tag)
-./scripts/seedbank-memory.sh save "User prefers oat milk lattes from Blue Bottle every weekday morning" "User coffee preference"
+./scripts/neural-brain-memory.sh save "User prefers oat milk lattes from Blue Bottle every weekday morning" "User coffee preference"
 
 # Semantische Suche (query, optional limit default 30, optional threshold default 0.5)
-./scripts/seedbank-memory.sh search "what do I know about blockchain" 10 0.5
+./scripts/neural-brain-memory.sh search "what do I know about blockchain" 10 0.5
 
 # Agent-Context anlegen
-./scripts/seedbank-memory.sh context-create "my-agent" "episodic" '{"key":"value"}'
+./scripts/neural-brain-memory.sh context-create "my-agent" "episodic" '{"key":"value"}'
 
 # Contexts auflisten (agentId, optional memoryType)
-./scripts/seedbank-memory.sh context-list "my-agent"
-./scripts/seedbank-memory.sh context-list "my-agent" episodic
+./scripts/neural-brain-memory.sh context-list "my-agent"
+./scripts/neural-brain-memory.sh context-list "my-agent" episodic
 
 # Einzelnen Context abrufen
-./scripts/seedbank-memory.sh context-get <uuid>
+./scripts/neural-brain-memory.sh context-get <uuid>
 ```
 
 Optional: `jq` für sicheres JSON-Escaping; ohne `jq` wird eine einfache Escaping-Logik verwendet.

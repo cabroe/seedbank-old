@@ -2,7 +2,7 @@
 .env
 .env.*
 *.md
-seedbank
+neural-brain
 scripts
 skills
 *.service

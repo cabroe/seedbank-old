@@ -1,4 +1,4 @@
-module github.com/cabroe/seedbank
+module github.com/cabroe/neural-brain
 
 go 1.24.0
 

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Agent Mission Control — Seedbank</title>
+  <title>AI Agent Mission Control — Neural Brain</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -389,7 +389,7 @@
       <button type="button" id="searchBtn">Search</button>
     </div>
 
-    <!-- Metrics (Seedbank only) -->
+    <!-- Metrics (Neural Brain only) -->
     <div class="metrics">
       <div class="metric">
         <div class="label">Memory Seeds</div>
@@ -402,7 +402,7 @@
     </div>
 
     <div class="main-grid">
-      <!-- Agents by context (from Seedbank) -->
+      <!-- Agents by context (from Neural Brain) -->
       <div>
         <div class="section-title">Agents (by context)</div>
         <div class="agents" id="agents"></div>
@@ -436,7 +436,7 @@
   </div>
 
   <script>
-    const SEEDBANK_URL = '';
+    const NEURAL_BRAIN_URL = '';
 
     const feedByType = {
       memory_captured: 'type-memory_captured',
@@ -459,7 +459,7 @@
 
     async function fetchStats() {
       try {
-        const r = await fetch(SEEDBANK_URL + '/stats');
+        const r = await fetch(NEURAL_BRAIN_URL + '/stats');
         if (!r.ok) throw new Error(r.statusText);
         return await r.json();
       } catch (e) {
@@ -469,7 +469,7 @@
 
     async function fetchAgentContexts() {
       try {
-        const r = await fetch(SEEDBANK_URL + '/agent-contexts');
+        const r = await fetch(NEURAL_BRAIN_URL + '/agent-contexts');
         if (!r.ok) throw new Error(r.statusText);
         return await r.json();
       } catch (e) {
@@ -478,14 +478,14 @@
     }
 
     async function fetchSearch(q, limit = 20) {
-      const url = SEEDBANK_URL + '/search?q=' + encodeURIComponent(q) + '&limit=' + limit;
+      const url = NEURAL_BRAIN_URL + '/search?q=' + encodeURIComponent(q) + '&limit=' + limit;
       const r = await fetch(url);
       if (!r.ok) throw new Error(await r.text());
       return await r.json();
     }
 
     async function postSeed(content, metadata = {}) {
-      const r = await fetch(SEEDBANK_URL + '/seeds', {
+      const r = await fetch(NEURAL_BRAIN_URL + '/seeds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, metadata })
@@ -495,7 +495,7 @@
     }
 
     async function postAgentContext(agentId, memoryType, payload = {}) {
-      const r = await fetch(SEEDBANK_URL + '/agent-contexts', {
+      const r = await fetch(NEURAL_BRAIN_URL + '/agent-contexts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId, memoryType, payload })
@@ -507,7 +507,7 @@
     function renderAgents(contexts) {
       const container = el('agents');
       if (!contexts || !contexts.length) {
-        container.innerHTML = '<div class="agent-card"><div class="task">No agent contexts in Seedbank yet</div></div>';
+        container.innerHTML = '<div class="agent-card"><div class="task">No agent contexts in Neural Brain yet</div></div>';
         return;
       }
       const byAgent = {};

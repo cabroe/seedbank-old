@@ -1,4 +1,4 @@
-/seedbank
+/neural-brain
 .env
 .venv/
 models/*.gtemodel

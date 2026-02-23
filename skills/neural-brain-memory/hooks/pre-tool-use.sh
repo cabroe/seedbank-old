@@ -2,12 +2,12 @@
 # Auto-Recall: Query memories before AI turn (Neutron-compatible: POST /seeds/query, .results[].content)
 
 # Check if auto-recall is enabled (default: true) — support both env names for compatibility
-VANAR_AUTO_RECALL="${VANAR_AUTO_RECALL:-${SEEDBANK_AUTO_RECALL:-true}}"
+VANAR_AUTO_RECALL="${VANAR_AUTO_RECALL:-${NEURAL_BRAIN_AUTO_RECALL:-true}}"
 [[ "$VANAR_AUTO_RECALL" != "true" ]] && exit 0
 
 set -euo pipefail
 
-BASE_URL="${SEEDBANK_URL:-http://localhost:9124}"
+BASE_URL="${NEURAL_BRAIN_URL:-http://localhost:9124}"
 APP_ID="${NEUTRON_AGENT_ID:-}"
 EXTERNAL_USER_ID="${YOUR_AGENT_IDENTIFIER:-1}"
 

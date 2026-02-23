@@ -5,7 +5,7 @@ description: Affect Simulation via V-A-D (Valence, Arousal, Dominance) tracking
 
 # Emotion Engine
 
-The Emotion Engine allows the agent to track, update, and retrieve its current affective state over time using the Seedbank API's `working` memory contexts.
+The Emotion Engine allows the agent to track, update, and retrieve its current affective state over time using the Neural Brain API's `working` memory contexts.
 
 It models emotion on three axes:
 1. **Valence** (0.0 to 10.0): How positive or negative the emotion is.

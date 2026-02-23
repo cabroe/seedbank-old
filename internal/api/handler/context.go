@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	apilib "github.com/cabroe/seedbank/internal/api"
-	"github.com/cabroe/seedbank/internal/store"
+	apilib "github.com/cabroe/neural-brain/internal/api"
+	"github.com/cabroe/neural-brain/internal/store"
 )
 
 var validMemoryTypes = map[string]bool{

@@ -9,7 +9,7 @@ export const Footer: React.FC = () => {
             </div>
             <div className="flex gap-4">
                 <span className="text-primary">DATA_SOURCE: GET /search + GET /stats</span>
-                <span>© 2026 SEEDBANK SYSTEMS</span>
+                <span>© 2026 NEURAL BRAIN SYSTEMS</span>
             </div>
         </footer>
     );

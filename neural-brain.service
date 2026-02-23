@@ -1,0 +1,18 @@
+[Unit]
+Description=Neural Brain – lokaler semantischer Speicher (OpenClaw)
+After=network.target
+
+[Service]
+Type=simple
+# Pfad anpassen, falls das Repo woanders liegt:
+WorkingDirectory=/home/jarvis/neural-brain
+EnvironmentFile=/home/jarvis/neural-brain/.env
+ExecStart=/home/jarvis/neural-brain/neural-brain
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=neural-brain
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

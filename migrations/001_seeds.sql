@@ -1,4 +1,4 @@
--- Seedbank: pgvector schema for semantic seeds (GTE-Small 384-dim, L2-normalized)
+-- Neural Brain: pgvector schema for semantic seeds (GTE-Small 384-dim, L2-normalized)
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS seeds (

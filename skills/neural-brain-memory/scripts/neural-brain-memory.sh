@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Seedbank Agent Memory CLI — Neutron-compatible interface (https://openclaw.vanarchain.com/guide-openclaw)
-# Use SEEDBANK_URL to point at Seedbank (default http://localhost:9124). Optional: NEUTRON_AGENT_ID, YOUR_AGENT_IDENTIFIER for query params.
+# Neural Brain Agent Memory CLI — Neutron-compatible interface (https://openclaw.vanarchain.com/guide-openclaw)
+# Use NEURAL_BRAIN_URL to point at Neural Brain (default http://localhost:9124). Optional: NEUTRON_AGENT_ID, YOUR_AGENT_IDENTIFIER for query params.
 
-BASE_URL="${SEEDBANK_URL:-http://localhost:9124}"
+BASE_URL="${NEURAL_BRAIN_URL:-http://localhost:9124}"
 APP_ID="${NEUTRON_AGENT_ID:-}"
 EXTERNAL_USER_ID="${YOUR_AGENT_IDENTIFIER:-1}"
 
-# Optional query params for Neutron compatibility (Seedbank ignores them)
+# Optional query params for Neutron compatibility (Neural Brain ignores them)
 QUERY_PARAMS=""
 if [[ -n "$APP_ID" ]]; then
     QUERY_PARAMS="appId=${APP_ID}&externalUserId=${EXTERNAL_USER_ID}"
@@ -27,7 +27,7 @@ case "${1:-}" in
         text="$2"
         title="${3:-Untitled}"
         if [[ -z "$text" ]]; then
-            echo "Usage: seedbank-memory save TEXT [TITLE]"
+            echo "Usage: neural-brain-memory save TEXT [TITLE]"
             exit 1
         fi
         if [[ -n "$QUERY_PARAMS" ]]; then
@@ -49,7 +49,7 @@ case "${1:-}" in
         limit="${3:-10}"
         threshold="${4:-0.5}"
         if [[ -z "$query" ]]; then
-            echo "Usage: seedbank-memory search QUERY [LIMIT] [THRESHOLD]"
+            echo "Usage: neural-brain-memory search QUERY [LIMIT] [THRESHOLD]"
             exit 1
         fi
         if [[ -n "$QUERY_PARAMS" ]]; then
@@ -68,7 +68,7 @@ case "${1:-}" in
         data="$4"
         metadata="${5:-{}}"
         if [[ -z "$agent_id" || -z "$memory_type" || -z "$data" ]]; then
-            echo "Usage: seedbank-memory context-create AGENT_ID MEMORY_TYPE JSON_DATA [JSON_METADATA]"
+            echo "Usage: neural-brain-memory context-create AGENT_ID MEMORY_TYPE JSON_DATA [JSON_METADATA]"
             echo ""
             echo "Memory types: episodic, semantic, procedural, working"
             exit 1
@@ -98,7 +98,7 @@ case "${1:-}" in
     context-get)
         context_id="$2"
         if [[ -z "$context_id" ]]; then
-            echo "Usage: seedbank-memory context-get CONTEXT_ID"
+            echo "Usage: neural-brain-memory context-get CONTEXT_ID"
             exit 1
         fi
         if [[ -n "$QUERY_PARAMS" ]]; then
@@ -108,7 +108,7 @@ case "${1:-}" in
         fi
         ;;
     test)
-        echo "Testing Seedbank API connection..."
+        echo "Testing Neural Brain API connection..."
         if [[ -n "$QUERY_PARAMS" ]]; then
             result=$(curl -s -X POST "${BASE_URL}/seeds/query?${QUERY_PARAMS}" \
                 -H "Content-Type: application/json" \
@@ -128,9 +128,9 @@ case "${1:-}" in
         fi
         ;;
     *)
-        echo "Seedbank Agent Memory CLI (Neutron-compatible)"
+        echo "Neural Brain Agent Memory CLI (Neutron-compatible)"
         echo ""
-        echo "Usage: seedbank-memory [command] [args]"
+        echo "Usage: neural-brain-memory [command] [args]"
         echo ""
         echo "Seed Commands:"
         echo "  save TEXT [TITLE]                         Save text as a seed"
@@ -145,13 +145,13 @@ case "${1:-}" in
         echo "Utility:"
         echo "  test                                      Test API connection"
         echo ""
-        echo "Environment: SEEDBANK_URL (default http://localhost:9124). Optional: NEUTRON_AGENT_ID, YOUR_AGENT_IDENTIFIER"
+        echo "Environment: NEURAL_BRAIN_URL (default http://localhost:9124). Optional: NEUTRON_AGENT_ID, YOUR_AGENT_IDENTIFIER"
         echo ""
         echo "Examples:"
-        echo "  seedbank-memory save \"Hello world\" \"My first seed\""
-        echo "  seedbank-memory search \"hello\" 10 0.5"
-        echo "  seedbank-memory context-create \"my-agent\" \"episodic\" '{\"key\":\"value\"}'"
-        echo "  seedbank-memory context-list \"my-agent\""
-        echo "  seedbank-memory context-get abc-123"
+        echo "  neural-brain-memory save \"Hello world\" \"My first seed\""
+        echo "  neural-brain-memory search \"hello\" 10 0.5"
+        echo "  neural-brain-memory context-create \"my-agent\" \"episodic\" '{\"key\":\"value\"}'"
+        echo "  neural-brain-memory context-list \"my-agent\""
+        echo "  neural-brain-memory context-get abc-123"
         ;;
 esac

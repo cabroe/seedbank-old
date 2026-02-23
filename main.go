@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/cabroe/seedbank/internal/api/handler"
-	"github.com/cabroe/seedbank/internal/model"
-	"github.com/cabroe/seedbank/internal/store"
+	"github.com/cabroe/neural-brain/internal/api/handler"
+	"github.com/cabroe/neural-brain/internal/model"
+	"github.com/cabroe/neural-brain/internal/store"
 )
 
 // responseWriter captures status for logging.
@@ -41,7 +41,7 @@ func main() {
 	}
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		databaseURL = "postgres://seedbank:seedbank@localhost:5433/seedbank?sslmode=disable"
+		databaseURL = "postgres://neural-brain:neural-brain@localhost:5433/neural-brain?sslmode=disable"
 	}
 	dedupThreshold := 0.0
 	if s := os.Getenv("DEDUP_THRESHOLD"); s != "" {
@@ -65,7 +65,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("create pool: %v", err)
 	}
-	// Retry ping so we tolerate Postgres starting after Seedbank (e.g. after reboot).
+	// Retry ping so we tolerate Postgres starting after Neural Brain (e.g. after reboot).
 	const dbRetries = 15
 	const dbRetryInterval = 2 * time.Second
 	var pingErr error

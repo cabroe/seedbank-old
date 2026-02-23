@@ -1,18 +1,18 @@
 # Optional: PostgreSQL with pgvector for local development
 # Start: docker compose up -d
-# Then: export DATABASE_URL=postgres://seedbank:seedbank@localhost:5433/seedbank?sslmode=disable
+# Then: export DATABASE_URL=postgres://neural-brain:neural-brain@localhost:5433/neural-brain?sslmode=disable
 
 services:
   postgres:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: seedbank
-      POSTGRES_PASSWORD: seedbank
-      POSTGRES_DB: seedbank
+      POSTGRES_USER: neural-brain
+      POSTGRES_PASSWORD: neural-brain
+      POSTGRES_DB: neural-brain
     ports:
       - "5433:5432"
     volumes:
-      - seedbank_pgdata:/var/lib/postgresql/data
+      - neural-brain_pgdata:/var/lib/postgresql/data
 
 volumes:
-  seedbank_pgdata:
+  neural-brain_pgdata:

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Emotion Engine CLI - Affect Simulation via Seedbank API
+# Emotion Engine CLI - Affect Simulation via Neural Brain API
 # Usage: ./emotion.sh <command> [args...]
 
-BASE_URL="${SEEDBANK_URL:-http://localhost:9124}"
+BASE_URL="${NEURAL_BRAIN_URL:-http://localhost:9124}"
 
 # Format JSON safely using jq (assumes jq is installed)
 format_json() {

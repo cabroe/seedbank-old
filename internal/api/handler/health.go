@@ -4,9 +4,9 @@ import (
 	"context"
 	"net/http"
 
-	apilib "github.com/cabroe/seedbank/internal/api"
-	"github.com/cabroe/seedbank/internal/store"
-	"github.com/cabroe/seedbank/internal/model"
+	apilib "github.com/cabroe/neural-brain/internal/api"
+	"github.com/cabroe/neural-brain/internal/store"
+	"github.com/cabroe/neural-brain/internal/model"
 )
 
 // HealthPinger is implemented by *pgxpool.Pool for health checks.

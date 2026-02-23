@@ -9,7 +9,7 @@ The Self-Reflection skill enables the agent to gather recent short-term memories
 
 ## Scripts
 - `reflect.sh`: The core CLI.
-  - `gather <hours>`: Retrieves recent Seedbank memories from the last X hours.
+  - `gather <hours>`: Retrieves recent Neural Brain memories from the last X hours.
   - `commit "<insight>" <importance> <confidence>`: Saves a new insight to the database, tagged as a `["reflection", "core-belief"]`.
 
 ## Usage Guidelines

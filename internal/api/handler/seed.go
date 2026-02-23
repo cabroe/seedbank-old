@@ -8,9 +8,9 @@ import (
 	"mime/multipart"
 
 	"github.com/jackc/pgx/v5"
-	apilib "github.com/cabroe/seedbank/internal/api"
-	"github.com/cabroe/seedbank/internal/store"
-	"github.com/cabroe/seedbank/internal/model"
+	apilib "github.com/cabroe/neural-brain/internal/api"
+	"github.com/cabroe/neural-brain/internal/store"
+	"github.com/cabroe/neural-brain/internal/model"
 )
 
 // HandleStoreSeed handles POST /seeds: JSON body or Neutron-style multipart form.
@@ -95,6 +95,9 @@ func HandleSearch(s *store.Store) http.HandlerFunc {
 			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		if seeds == nil {
+			seeds = []store.Seed{}
+		}
 		apilib.RespondJSON(w, http.StatusOK, seeds)
 	}
 }
@@ -138,6 +141,9 @@ func HandleSeedsQuery(s *store.Store) http.HandlerFunc {
 				Content:    se.Content,
 				Similarity: se.Score,
 			})
+		}
+		if results == nil {
+			results = []apilib.SeedQueryResult{}
 		}
 		apilib.RespondJSON(w, http.StatusOK, map[string]interface{}{"results": results})
 	}
