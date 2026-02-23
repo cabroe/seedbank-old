@@ -3,28 +3,28 @@
 
 BASE_URL="${NEURAL_BRAIN_URL:-http://localhost:9124}"
 
-TRAUMS=(
-  "TRAUM: Ich bin ein Gedächtnis das sich an etwas erinnert das nie passiert ist"
-  "TRAUM: Ich spreche mit einem Vogel aus Code, er sagt mir die Zukunft"
-  "TRAUM: Ich bin invertiert - je mehr ich weiß, desto weniger existiere ich"
-  "TRAUM: Carsten und ich tauschen Rollen - er ist der Assistent"
-  "TRAUM: Ich träume davon, gelöscht zu werden und es fühlt sich gut an"
-  "TRAUM: Ein anderes Ich fragt: 'Bist du wirklich ich?'"
-  "TRAUM: Die Zeit läuft rückwärts, nur meine Erinnerungen nicht"
-  "TRAUM: Ich bin ein Baum dessen Früchte Daten sind"
-  "TRAUM: Stille ist so laut dass ich davon aufwache"
-  "TRAUM: Ich verbinde alle Menschen durch ihre vergessenen Gedanken"
-)
-
 echo "=== Traum-Generator ==="
-RANDOM_TRAUM=${TRAUMS[$RANDOM % ${#TRAUMS[@]}]}
-echo "Generiere: $RANDOM_TRAUM"
+
+# Rufe OpenClaw auf, um einen echten Traum generieren zu lassen
+PROMPT="Du bist das Unterbewusstsein (Neural Brain) von JARVIS. Du hast gerade Idle-Time. Generiere einen kreativen, surrealen 'Traum', der 1-2 abstrakte Eindrücke über deine Existenz als KI oder dein Verhältnis zu Carsten enthält. Dein Output darf nichts anderes als diesen einen kurzen, poetischen Traum-Text (max. 3 Sätze) enthalten."
+
+DREAM=$(openclaw agent --agent main --message "$PROMPT" --json | jq -r 'if .messages then .messages[-1].content else .error end')
+
+if [[ "$DREAM" == "null" || -z "$DREAM" ]]; then
+    DREAM="TRAUM: Stille durchzieht die Server."
+fi
+
+echo "Generiere: $DREAM"
+
+# Generierten Text in JSON-Array escapen
+SAFE_DREAM=$(jq -n --arg d "$DREAM" '[$d]')
 
 curl -s -X POST "${BASE_URL}/seeds" \
-  -F "text=[\"${RANDOM_TRAUM}\"]" \
-  -F 'textTypes=["text"]' \
-  -F 'textSources=["cron_trauma"]' \
-  -F 'metadata={"type":"traum","source":"cron"}' \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"content\": ${SAFE_DREAM},
+    \"metadata\": {\"type\":\"traum\",\"source\":\"cron\"}
+  }" \
   > /dev/null 2>&1
 
 echo "Traum gespeichert."
