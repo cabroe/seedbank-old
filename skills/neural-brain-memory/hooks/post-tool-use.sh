@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Auto-Capture: Save conversation after AI turn (Neutron-compatible: POST /seeds multipart)
 
-# Check if auto-capture is enabled (default: true) — support both env names
-VANAR_AUTO_CAPTURE="${VANAR_AUTO_CAPTURE:-${NEURAL_BRAIN_AUTO_CAPTURE:-true}}"
-[[ "$VANAR_AUTO_CAPTURE" != "true" ]] && exit 0
+# Check if auto-capture is enabled (default: true)
+NEURAL_BRAIN_AUTO_CAPTURE="${NEURAL_BRAIN_AUTO_CAPTURE:-true}"
+[[ "$NEURAL_BRAIN_AUTO_CAPTURE" != "true" ]] && exit 0
 
 BASE_URL="${NEURAL_BRAIN_URL:-http://localhost:9124}"
 APP_ID="${NEUTRON_AGENT_ID:-}"

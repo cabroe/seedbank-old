@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Auto-Recall: Query memories before AI turn (Neutron-compatible: POST /seeds/query, .results[].content)
 
-# Check if auto-recall is enabled (default: true) — support both env names for compatibility
-VANAR_AUTO_RECALL="${VANAR_AUTO_RECALL:-${NEURAL_BRAIN_AUTO_RECALL:-true}}"
-[[ "$VANAR_AUTO_RECALL" != "true" ]] && exit 0
+# Check if auto-recall is enabled (default: true)
+NEURAL_BRAIN_AUTO_RECALL="${NEURAL_BRAIN_AUTO_RECALL:-true}"
+[[ "$NEURAL_BRAIN_AUTO_RECALL" != "true" ]] && exit 0
 
 set -euo pipefail
 
