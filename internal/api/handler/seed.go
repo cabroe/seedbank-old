@@ -83,7 +83,7 @@ func HandleStoreSeed(s *store.Store) http.HandlerFunc {
 	}
 }
 
-// HandleSearch handles GET /search?q=...&limit=...&threshold=...
+// HandleSearch handles GET /search?q=...&limit=...&threshold=...&seedIds=1,2,3
 func HandleSearch(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -96,7 +96,18 @@ func HandleSearch(s *store.Store) http.HandlerFunc {
 			return
 		}
 		limit, threshold := parseSearchParams(r.URL.Query().Get("limit"), r.URL.Query().Get("threshold"))
-		seeds, err := runSearch(s, r, q, limit, threshold)
+		
+		var seedIDs []int64
+		if sids := r.URL.Query().Get("seedIds"); sids != "" {
+			parts := strings.Split(sids, ",")
+			for _, p := range parts {
+				if id, err := strconv.ParseInt(strings.TrimSpace(p), 10, 64); err == nil {
+					seedIDs = append(seedIDs, id)
+				}
+			}
+		}
+
+		seeds, err := runSearch(s, r, q, limit, threshold, seedIDs)
 		if err != nil {
 			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -157,7 +168,7 @@ func HandleSeedsQuery(s *store.Store) http.HandlerFunc {
 		if threshold < 0 {
 			threshold = -1
 		}
-		seeds, err := runSearch(s, r, req.Query, limit, threshold)
+		seeds, err := runSearch(s, r, req.Query, limit, threshold, req.SeedIDs)
 		if err != nil {
 			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -383,12 +394,12 @@ func parseSearchParams(limitStr, thresholdStr string) (limit int, threshold floa
 	return limit, threshold
 }
 
-func runSearch(s *store.Store, r *http.Request, q string, limit int, threshold float64) ([]store.Seed, error) {
+func runSearch(s *store.Store, r *http.Request, q string, limit int, threshold float64, seedIDs []int64) ([]store.Seed, error) {
 	emb, err := model.Embed(q)
 	if err != nil {
 		return nil, err
 	}
-	seeds, err := s.Search(r.Context(), emb, limit)
+	seeds, err := s.Search(r.Context(), emb, limit, seedIDs)
 	if err != nil {
 		return nil, err
 	}

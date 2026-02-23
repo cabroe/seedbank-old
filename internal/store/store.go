@@ -132,16 +132,33 @@ func (s *Store) UpdateSeed(ctx context.Context, id int64, content string, metada
 }
 
 // Search returns seeds nearest to the query embedding (cosine), limit rows.
-func (s *Store) Search(ctx context.Context, queryEmbedding []float32, limit int) ([]Seed, error) {
+// If seedIDs is not empty, limits search to those specific IDs.
+func (s *Store) Search(ctx context.Context, queryEmbedding []float32, limit int, seedIDs []int64) ([]Seed, error) {
 	if limit <= 0 {
 		limit = 10
 	}
 	vec := pgvector.NewVector(queryEmbedding)
-	rows, err := s.pool.Query(ctx,
-		`SELECT id, content, metadata, created_at, 1 - (embedding <=> $1) AS score
-		 FROM seeds ORDER BY embedding <=> $1 LIMIT $2`,
-		vec, limit,
-	)
+
+	var rows pgx.Rows
+	var err error
+
+	if len(seedIDs) > 0 {
+		rows, err = s.pool.Query(ctx,
+			`SELECT id, content, metadata, created_at, 1 - (embedding <=> $1) AS score
+			 FROM seeds 
+			 WHERE id = ANY($3)
+			 ORDER BY embedding <=> $1 LIMIT $2`,
+			vec, limit, seedIDs,
+		)
+	} else {
+		rows, err = s.pool.Query(ctx,
+			`SELECT id, content, metadata, created_at, 1 - (embedding <=> $1) AS score
+			 FROM seeds 
+			 ORDER BY embedding <=> $1 LIMIT $2`,
+			vec, limit,
+		)
+	}
+
 	if err != nil {
 		return nil, err
 	}
