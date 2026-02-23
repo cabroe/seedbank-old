@@ -45,7 +45,10 @@ model:
 env:
 	cp .env.example .env
 
-build:
+build-ui:
+	npm run build --prefix backend
+
+build: build-ui
 	go build -o neural-brain .
 	docker build -t neural-brain:latest .
 

@@ -12,12 +12,17 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"embed"
+	"io/fs"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/cabroe/neural-brain/internal/api/handler"
 	"github.com/cabroe/neural-brain/internal/model"
 	"github.com/cabroe/neural-brain/internal/store"
 )
+
+//go:embed backend/dist
+var webDist embed.FS
 
 // responseWriter captures status for logging.
 type responseWriter struct {
@@ -140,7 +145,44 @@ func main() {
 	mux.HandleFunc("GET /agent-contexts", handler.HandleListContexts(s))
 	mux.HandleFunc("GET /agent-contexts/{id}", handler.HandleGetContext(s))
 	mux.HandleFunc("GET /stats", handler.HandleStats(s))
-	mux.Handle("/", http.FileServer(http.Dir("web")))
+
+	distFS, err := fs.Sub(webDist, "backend/dist")
+	if err != nil {
+		log.Fatalf("failed to create sub filesystem: %v", err)
+	}
+	
+	fileServer := http.FileServer(http.FS(distFS))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// If the request path contains a dot (like .js, .css, .ico), serve the file directly
+		if strings.Contains(r.URL.Path, ".") {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+		
+		// Attempt to open the exact file
+		f, err := distFS.Open(strings.TrimPrefix(r.URL.Path, "/"))
+		if err == nil {
+			f.Close()
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Otherwise, it's a client side route, serve index.html
+		indexFile, err := distFS.Open("index.html")
+		if err != nil {
+			http.Error(w, "index.html not found", http.StatusInternalServerError)
+			return
+		}
+		defer indexFile.Close()
+
+		info, err := indexFile.Stat()
+		if err != nil {
+			http.Error(w, "index.html stat failed", http.StatusInternalServerError)
+			return
+		}
+
+		http.ServeContent(w, r, "index.html", info.ModTime(), indexFile.(io.ReadSeeker))
+	})
 
 	corsHandler := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
