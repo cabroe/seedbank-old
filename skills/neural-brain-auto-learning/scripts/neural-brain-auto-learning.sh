@@ -27,11 +27,12 @@ echo "Fehler: $ERRORS"
 # 3. Lernregel erstellen wenn genug Fehler
 if [ -n "$ERRORS" ] && [ "$ERRORS" -gt 5 ] 2>/dev/null; then
   echo "Mehr Fehler erkannt - speichere Lernregel"
+  PAYLOAD=$(jq -n --arg content "Auto-Learning: $ERRORS Fehler gefunden. Mehr darauf achten." \
+    --argjson meta "{\"type\":\"learning\",\"fehler\":$ERRORS}" \
+    '{content: $content, metadata: $meta}')
   curl -s -X POST "${BASE_URL}/seeds" \
-    -F "text=Auto-Learning: $ERRORS Fehler gefunden. Mehr darauf achten." \
-    -F 'textTypes=["text"]' \
-    -F 'textSources=["cron"]' \
-    -F "metadata={\"type\":\"learning\",\"fehler\":$ERRORS}" \
+    -H "Content-Type: application/json" \
+    -d "$PAYLOAD" \
     > /dev/null 2>&1
 fi
 

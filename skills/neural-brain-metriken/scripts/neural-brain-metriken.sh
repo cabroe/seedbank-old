@@ -2,27 +2,34 @@
 # Metriken - Erweiterte Stats für JARVIS
 
 BASE_URL="${NEURAL_BRAIN_URL:-http://localhost:9124}"
-GOALS_SCRIPT="/home/jarvis/.openclaw/workspace/skills/goal-hierarchy/scripts/goals.sh"
-EMOTION_SCRIPT="/home/jarvis/.openclaw/workspace/skills/emotion-engine/scripts/emotion.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_DIR="$SCRIPT_DIR/../.."
+GOALS_SCRIPT="$BASE_DIR/neural-brain-goal-hierarchy/scripts/goals.sh"
+EMOTION_SCRIPT="$BASE_DIR/neural-brain-emotion-engine/scripts/neural-brain-emotion.sh"
 
 echo "=== Metriken ==="
 
 # 1. Seeds zählen
 STATS=$(curl -s "${BASE_URL}/stats")
-SEEDS=$(echo "$STATS" | jq -r '.seeds // 0')
-CONTEXTS=$(echo "$STATS" | jq -r '.agent_contexts // 0')
+SEEDS=$(echo "$STATS" | jq -r '.seedsCount' 2>/dev/null || echo "0")
+if [ "$SEEDS" = "null" ] || [ -z "$SEEDS" ]; then SEEDS=0; fi
+CONTEXTS=$(echo "$STATS" | jq -r '.agentContextsCount' 2>/dev/null || echo "0")
+if [ "$CONTEXTS" = "null" ] || [ -z "$CONTEXTS" ]; then CONTEXTS=0; fi
 
 echo "Seeds: $SEEDS, Contexts: $CONTEXTS"
 
 # 2. Aktive Goals
-ACTIVE_GOALS=$($GOALS_SCRIPT list active 2>/dev/null | grep -c "active" || echo "0")
+ACTIVE_GOALS=$($GOALS_SCRIPT list active 2>/dev/null | grep -c "active" || true)
 echo "Aktive Goals: $ACTIVE_GOALS"
 
 # 3. Emotionen-Status
 EMOTION=$($EMOTION_SCRIPT get jarvis 2>/dev/null)
-VALENCE=$(echo "$EMOTION" | jq -r '.valence // 5.0')
-AROUSAL=$(echo "$EMOTION" | jq -r '.arousal // 5.0')
-DOMINANCE=$(echo "$EMOTION" | jq -r '.dominance // 5.0')
+VALENCE=$(echo "$EMOTION" | jq -r '.valence' 2>/dev/null || echo "5.0")
+if [ "$VALENCE" = "null" ] || [ -z "$VALENCE" ]; then VALENCE=5.0; fi
+AROUSAL=$(echo "$EMOTION" | jq -r '.arousal' 2>/dev/null || echo "5.0")
+if [ "$AROUSAL" = "null" ] || [ -z "$AROUSAL" ]; then AROUSAL=5.0; fi
+DOMINANCE=$(echo "$EMOTION" | jq -r '.dominance' 2>/dev/null || echo "5.0")
+if [ "$DOMINANCE" = "null" ] || [ -z "$DOMINANCE" ]; then DOMINANCE=5.0; fi
 echo "Emotionen: V=$VALENCE, A=$AROUSAL, D=$DOMINANCE"
 
 # 4. Letzten User-Input finden
@@ -39,11 +46,13 @@ echo "Cron-Jobs: $CRON_COUNT | Fehler: $CRON_ERRORS"
 
 # 6. Speichern als Seed
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M")
+PAYLOAD=$(jq -n --arg content "Metriken ${TIMESTAMP}: Seeds=$SEEDS, Contexts=$CONTEXTS, Goals=$ACTIVE_GOALS, Emotion=V${VALENCE}A${AROUSAL}D${DOMINANCE}" \
+  --argjson meta "{\"type\":\"metrik\",\"seeds\":${SEEDS},\"contexts\":${CONTEXTS},\"goals\":${ACTIVE_GOALS},\"valence\":${VALENCE},\"arousal\":${AROUSAL},\"dominance\":${DOMINANCE}}" \
+  '{content: $content, metadata: $meta}')
+
 curl -s -X POST "${BASE_URL}/seeds" \
-    -F "text=Metriken ${TIMESTAMP}: Seeds=$SEEDS, Contexts=$CONTEXTS, Goals=$ACTIVE_GOALS, Emotion=V${VALENCE}A${AROUSAL}D${DOMINANCE}" \
-    -F 'textTypes=["text"]' \
-    -F 'textSources=["cron"]' \
-    -F "metadata={\"type\":\"metrik\",\"seeds\":${SEEDS},\"contexts\":${CONTEXTS},\"goals\":${ACTIVE_GOALS},\"valence\":${VALENCE},\"arousal\":${AROUSAL},\"dominance\":${DOMINANCE}}" \
+    -H "Content-Type: application/json" \
+    -d "$PAYLOAD" \
     > /dev/null 2>&1
 
 echo "Metriken gespeichert."
