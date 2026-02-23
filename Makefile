@@ -9,7 +9,8 @@ help:
 	@echo "  make db-down    - Stoppt die Postgres-Datenbank"
 	@echo "  make db-clean   - Löscht Docker-Container & Images (Daten/Volumes bleiben erhalten)"
 	@echo "  make db-logs    - Zeigt die Live-Logs der Datenbank"
-	@echo "  make install    - Baut das Projekt und installiert den systemd-Dienst"
+	@echo "  make install    - Baut Projekt, installiert systemd-Dienst & kopiert Skills"
+	@echo "  make install-skills - Kopiert die Skills in das OpenClaw-Verzeichnis"
 	@echo "  make logs       - Zeigt die Live-Logs des systemd-Dienstes"
 	@echo "  make clean      - Stoppt den Dienst, löscht Binary und Build-Dateien"
 	@echo "  make status     - Zeigt den Status von Dienst, API und Datenbank"
@@ -38,13 +39,18 @@ dev:
 	npm install --prefix backend
 	npm run dev --prefix backend
 
-install: build
+install: build install-skills
 	mkdir -p $$HOME/.config/systemd/user
 	cp neural-brain.service $$HOME/.config/systemd/user/
 	systemctl --user daemon-reload
 	systemctl --user enable --now neural-brain
 	systemctl --user restart neural-brain
 	@echo "systemd-Dienst 'neural-brain' installiert und gestartet."
+
+install-skills:
+	mkdir -p $$HOME/.openclaw/workspace/skills
+	cp -r skills/* $$HOME/.openclaw/workspace/skills/
+	@echo "Skills erfolgreich nach ~/.openclaw/workspace/skills kopiert."
 
 logs:
 	journalctl --user -u neural-brain -n 50 -f
