@@ -8,6 +8,7 @@ help:
 	@echo "  make db-up      - Startet die Postgres-Datenbank via Docker"
 	@echo "  make db-down    - Stoppt die Postgres-Datenbank"
 	@echo "  make db-clean   - Löscht Docker-Container & Images (Daten/Volumes bleiben erhalten)"
+	@echo "  make db-logs    - Zeigt die Live-Logs der Datenbank"
 	@echo "  make install    - Baut das Projekt und installiert den systemd-Dienst"
 	@echo "  make logs       - Zeigt die Live-Logs des systemd-Dienstes"
 	@echo "  make clean      - Stoppt den Dienst, löscht Binary und Build-Dateien"
@@ -21,6 +22,9 @@ db-down:
 
 db-clean:
 	docker compose down --rmi all
+
+db-logs:
+	docker compose logs -f postgres
 
 build:
 	npm install --prefix backend
