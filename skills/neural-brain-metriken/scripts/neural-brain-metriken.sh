@@ -8,11 +8,11 @@ EMOTION_SCRIPT="/home/jarvis/.openclaw/workspace/skills/emotion-engine/scripts/e
 echo "=== Metriken ==="
 
 # 1. Seeds zählen
-SEEDS=$(curl -s -X POST "${BASE_URL}/seeds/query" \
-  -H "Content-Type: application/json" \
-  -d '{"query":".","limit":1,"threshold":0}' | jq '.results | length')
+STATS=$(curl -s "${BASE_URL}/stats")
+SEEDS=$(echo "$STATS" | jq -r '.seeds // 0')
+CONTEXTS=$(echo "$STATS" | jq -r '.agent_contexts // 0')
 
-echo "Seeds: $SEEDS"
+echo "Seeds: $SEEDS, Contexts: $CONTEXTS"
 
 # 2. Aktive Goals
 ACTIVE_GOALS=$($GOALS_SCRIPT list active 2>/dev/null | grep -c "active" || echo "0")
@@ -40,10 +40,10 @@ echo "Cron-Jobs: $CRON_COUNT | Fehler: $CRON_ERRORS"
 # 6. Speichern als Seed
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M")
 curl -s -X POST "${BASE_URL}/seeds" \
-    -F "text=Metriken ${TIMESTAMP}: Seeds=$SEEDS, Goals=$ACTIVE_GOALS, Emotion=V${VALENCE}A${AROUSAL}D${DOMINANCE}" \
+    -F "text=Metriken ${TIMESTAMP}: Seeds=$SEEDS, Contexts=$CONTEXTS, Goals=$ACTIVE_GOALS, Emotion=V${VALENCE}A${AROUSAL}D${DOMINANCE}" \
     -F 'textTypes=["text"]' \
     -F 'textSources=["cron"]' \
-    -F "metadata={\"type\":\"metrik\",\"seeds\":${SEEDS},\"goals\":${ACTIVE_GOALS},\"valence\":${VALENCE},\"arousal\":${AROUSAL},\"dominance\":${DOMINANCE}}" \
+    -F "metadata={\"type\":\"metrik\",\"seeds\":${SEEDS},\"contexts\":${CONTEXTS},\"goals\":${ACTIVE_GOALS},\"valence\":${VALENCE},\"arousal\":${AROUSAL},\"dominance\":${DOMINANCE}}" \
     > /dev/null 2>&1
 
 echo "Metriken gespeichert."

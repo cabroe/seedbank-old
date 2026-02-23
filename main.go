@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 	"embed"
+	"io"
 	"io/fs"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -140,11 +141,12 @@ func main() {
 	mux.HandleFunc("GET /seeds/{id}", handler.HandleGetSeed(s))
 	mux.HandleFunc("PUT /seeds/{id}", handler.HandleUpdateSeed(s))
 	mux.HandleFunc("GET /search", handler.HandleSearch(s))
+	mux.HandleFunc("GET /seeds/recent", handler.HandleGetRecent(s))
 	mux.HandleFunc("GET /health", handler.HandleHealth(pool))
 	mux.HandleFunc("POST /agent-contexts", handler.HandleCreateContext(s))
 	mux.HandleFunc("GET /agent-contexts", handler.HandleListContexts(s))
 	mux.HandleFunc("GET /agent-contexts/{id}", handler.HandleGetContext(s))
-	mux.HandleFunc("GET /stats", handler.HandleStats(s))
+	mux.HandleFunc("GET /stats", handler.HandleGetStats(s))
 
 	distFS, err := fs.Sub(webDist, "backend/dist")
 	if err != nil {

@@ -102,6 +102,28 @@ func HandleSearch(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// HandleGetRecent handles GET /seeds/recent?limit=...
+func HandleGetRecent(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			apilib.RespondError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+		limitStr := r.URL.Query().Get("limit")
+		limit, _ := parseSearchParams(limitStr, "")
+		
+		seeds, err := s.GetRecent(r.Context(), limit)
+		if err != nil {
+			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if seeds == nil {
+			seeds = []store.Seed{}
+		}
+		apilib.RespondJSON(w, http.StatusOK, seeds)
+	}
+}
+
 // HandleSeedsQuery handles POST /seeds/query (Neutron-compatible).
 func HandleSeedsQuery(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -237,6 +259,33 @@ func HandleGetSeed(s *store.Store) http.HandlerFunc {
 		}
 
 		apilib.RespondJSON(w, http.StatusOK, seed)
+	}
+}
+
+// HandleGetStats handles GET /stats.
+func HandleGetStats(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			apilib.RespondError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+
+		seedsCount, err := s.SeedsCount(r.Context())
+		if err != nil {
+			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		contextsCount, err := s.AgentContextsCount(r.Context())
+		if err != nil {
+			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		apilib.RespondJSON(w, http.StatusOK, map[string]int64{
+			"seeds":          seedsCount,
+			"agent_contexts": contextsCount,
+		})
 	}
 }
 

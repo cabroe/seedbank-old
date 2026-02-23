@@ -144,6 +144,34 @@ func (s *Store) Search(ctx context.Context, queryEmbedding []float32, limit int)
 	return seeds, rows.Err()
 }
 
+// GetRecent returns the most recently created seeds, purely chronological, without vector search.
+func (s *Store) GetRecent(ctx context.Context, limit int) ([]Seed, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	rows, err := s.pool.Query(ctx,
+		`SELECT id, content, metadata, created_at, 0 AS score
+		 FROM seeds ORDER BY created_at DESC LIMIT $1`,
+		limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var seeds []Seed
+	for rows.Next() {
+		var se Seed
+		var createdAt time.Time
+		err := rows.Scan(&se.ID, &se.Content, &se.Metadata, &createdAt, &se.Score)
+		if err != nil {
+			return nil, err
+		}
+		se.CreatedAt = createdAt.Format(time.RFC3339)
+		seeds = append(seeds, se)
+	}
+	return seeds, rows.Err()
+}
+
 // InsertContext adds an agent context and returns its ID.
 func (s *Store) InsertContext(ctx context.Context, agentID, memoryType string, payload json.RawMessage) (string, error) {
 	if payload == nil {
