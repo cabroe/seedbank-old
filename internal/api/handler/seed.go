@@ -57,13 +57,16 @@ func HandleStoreSeed(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		appID := r.URL.Query().Get("appId")
+		externalUserID := r.URL.Query().Get("externalUserId")
+
 		emb, err := model.Embed(content)
 		if err != nil {
 			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		id, err := s.Insert(r.Context(), content, metadata, emb)
+		id, err := s.Insert(r.Context(), content, metadata, emb, appID, externalUserID)
 		if err != nil {
 			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -107,7 +110,10 @@ func HandleSearch(s *store.Store) http.HandlerFunc {
 			}
 		}
 
-		seeds, err := runSearch(s, r, q, limit, threshold, seedIDs)
+		appID := r.URL.Query().Get("appId")
+		externalUserID := r.URL.Query().Get("externalUserId")
+
+		seeds, err := runSearch(s, r, q, limit, threshold, seedIDs, appID, externalUserID)
 		if err != nil {
 			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -129,7 +135,10 @@ func HandleGetRecent(s *store.Store) http.HandlerFunc {
 		limitStr := r.URL.Query().Get("limit")
 		limit, _ := parseSearchParams(limitStr, "")
 		
-		seeds, err := s.GetRecent(r.Context(), limit)
+		appID := r.URL.Query().Get("appId")
+		externalUserID := r.URL.Query().Get("externalUserId")
+		
+		seeds, err := s.GetRecent(r.Context(), limit, appID, externalUserID)
 		if err != nil {
 			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -168,7 +177,10 @@ func HandleSeedsQuery(s *store.Store) http.HandlerFunc {
 		if threshold < 0 {
 			threshold = -1
 		}
-		seeds, err := runSearch(s, r, req.Query, limit, threshold, req.SeedIDs)
+		appID := r.URL.Query().Get("appId")
+		externalUserID := r.URL.Query().Get("externalUserId")
+
+		seeds, err := runSearch(s, r, req.Query, limit, threshold, req.SeedIDs, appID, externalUserID)
 		if err != nil {
 			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -341,7 +353,10 @@ func HandleUpdateSeed(s *store.Store) http.HandlerFunc {
 			metadata = []byte("{}")
 		}
 
-		err = s.UpdateSeed(r.Context(), id, req.Content, metadata, emb)
+		appID := r.URL.Query().Get("appId")
+		externalUserID := r.URL.Query().Get("externalUserId")
+
+		err = s.UpdateSeed(r.Context(), id, req.Content, metadata, emb, appID, externalUserID)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				apilib.RespondError(w, http.StatusNotFound, "not found")
@@ -394,12 +409,12 @@ func parseSearchParams(limitStr, thresholdStr string) (limit int, threshold floa
 	return limit, threshold
 }
 
-func runSearch(s *store.Store, r *http.Request, q string, limit int, threshold float64, seedIDs []int64) ([]store.Seed, error) {
+func runSearch(s *store.Store, r *http.Request, q string, limit int, threshold float64, seedIDs []int64, appID, externalUserID string) ([]store.Seed, error) {
 	emb, err := model.Embed(q)
 	if err != nil {
 		return nil, err
 	}
-	seeds, err := s.Search(r.Context(), emb, limit, seedIDs)
+	seeds, err := s.Search(r.Context(), emb, limit, seedIDs, appID, externalUserID)
 	if err != nil {
 		return nil, err
 	}

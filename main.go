@@ -146,6 +146,11 @@ func main() {
 	mux.HandleFunc("POST /agent-contexts", handler.HandleCreateContext(s))
 	mux.HandleFunc("GET /agent-contexts", handler.HandleListContexts(s))
 	mux.HandleFunc("GET /agent-contexts/{id}", handler.HandleGetContext(s))
+	// Aliases for Neutron compatibility
+	mux.HandleFunc("POST /contexts", handler.HandleCreateContext(s))
+	mux.HandleFunc("GET /contexts", handler.HandleListContexts(s))
+	mux.HandleFunc("GET /contexts/{id}", handler.HandleGetContext(s))
+
 	mux.HandleFunc("GET /stats", handler.HandleGetStats(s))
 
 	distFS, err := fs.Sub(webDist, "backend/dist")

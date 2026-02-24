@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -13,20 +14,24 @@ import (
 
 // Seed is a stored item with content, embedding, and optional metadata.
 type Seed struct {
-	ID        int64           `json:"id"`
-	Content   string          `json:"content"`
-	Metadata  json.RawMessage `json:"metadata"`
-	CreatedAt string          `json:"created_at,omitempty"`
-	Score     float64         `json:"score,omitempty"` // similarity score for search results
+	ID             int64           `json:"id"`
+	Content        string          `json:"content"`
+	Metadata       json.RawMessage `json:"metadata"`
+	AppID          string          `json:"appId,omitempty"`
+	ExternalUserID string          `json:"externalUserId,omitempty"`
+	CreatedAt      string          `json:"created_at,omitempty"`
+	Score          float64         `json:"score,omitempty"` // similarity score for search results
 }
 
 // AgentContext is a session-scoped context for an agent (episodic, semantic, procedural, working).
 type AgentContext struct {
-	ID         string          `json:"id"`
-	AgentID    string          `json:"agentId"`
-	MemoryType string          `json:"memoryType"`
-	Payload    json.RawMessage `json:"payload"`
-	CreatedAt  string          `json:"createdAt,omitempty"`
+	ID             string          `json:"id"`
+	AgentID        string          `json:"agentId"`
+	AppID          string          `json:"appId,omitempty"`
+	ExternalUserID string          `json:"externalUserId,omitempty"`
+	MemoryType     string          `json:"memoryType"`
+	Payload        json.RawMessage `json:"payload"`
+	CreatedAt      string          `json:"createdAt,omitempty"`
 }
 
 // Store provides database operations for seeds.
@@ -41,7 +46,7 @@ func NewStore(pool *pgxpool.Pool, dedupThreshold float64) *Store {
 }
 
 // Insert adds a seed: embed content, optionally dedupe, then INSERT. Returns id or 0 if skipped (duplicate).
-func (s *Store) Insert(ctx context.Context, content string, metadata json.RawMessage, embedding []float32) (int64, error) {
+func (s *Store) Insert(ctx context.Context, content string, metadata json.RawMessage, embedding []float32, appID, externalUserID string) (int64, error) {
 	vec := pgvector.NewVector(embedding)
 
 	if s.dedupThreshold > 0 {
@@ -73,8 +78,9 @@ func (s *Store) Insert(ctx context.Context, content string, metadata json.RawMes
 
 	var id int64
 	err := s.pool.QueryRow(ctx,
-		`INSERT INTO seeds (content, embedding, metadata) VALUES ($1, $2, COALESCE($3::jsonb, '{}')) RETURNING id`,
-		content, vec, metadata,
+		`INSERT INTO seeds (content, embedding, metadata, app_id, external_user_id) 
+		 VALUES ($1, $2, COALESCE($3::jsonb, '{}'), $4, $5) RETURNING id`,
+		content, vec, metadata, appID, externalUserID,
 	).Scan(&id)
 	if err != nil {
 		return 0, err
@@ -102,9 +108,9 @@ func (s *Store) GetSeed(ctx context.Context, id int64) (*Seed, error) {
 	var se Seed
 	var createdAt time.Time
 	err := s.pool.QueryRow(ctx,
-		`SELECT id, content, metadata, created_at FROM seeds WHERE id = $1`,
+		`SELECT id, content, metadata, created_at, app_id, external_user_id FROM seeds WHERE id = $1`,
 		id,
-	).Scan(&se.ID, &se.Content, &se.Metadata, &createdAt)
+	).Scan(&se.ID, &se.Content, &se.Metadata, &createdAt, &se.AppID, &se.ExternalUserID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil // Not found
@@ -116,11 +122,11 @@ func (s *Store) GetSeed(ctx context.Context, id int64) (*Seed, error) {
 }
 
 // UpdateSeed fully overwrites a seed's content, metadata, and recalculates its embedding.
-func (s *Store) UpdateSeed(ctx context.Context, id int64, content string, metadata json.RawMessage, embedding []float32) error {
+func (s *Store) UpdateSeed(ctx context.Context, id int64, content string, metadata json.RawMessage, embedding []float32, appID, externalUserID string) error {
 	vec := pgvector.NewVector(embedding)
 	cmdTag, err := s.pool.Exec(ctx,
-		`UPDATE seeds SET content = $1, metadata = COALESCE($2::jsonb, '{}'), embedding = $3 WHERE id = $4`,
-		content, metadata, vec, id,
+		`UPDATE seeds SET content = $1, metadata = COALESCE($2::jsonb, '{}'), embedding = $3, app_id = $4, external_user_id = $5 WHERE id = $6`,
+		content, metadata, vec, appID, externalUserID, id,
 	)
 	if err != nil {
 		return err
@@ -133,7 +139,7 @@ func (s *Store) UpdateSeed(ctx context.Context, id int64, content string, metada
 
 // Search returns seeds nearest to the query embedding (cosine), limit rows.
 // If seedIDs is not empty, limits search to those specific IDs.
-func (s *Store) Search(ctx context.Context, queryEmbedding []float32, limit int, seedIDs []int64) ([]Seed, error) {
+func (s *Store) Search(ctx context.Context, queryEmbedding []float32, limit int, seedIDs []int64, appID, externalUserID string) ([]Seed, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -142,22 +148,30 @@ func (s *Store) Search(ctx context.Context, queryEmbedding []float32, limit int,
 	var rows pgx.Rows
 	var err error
 
+	baseQuery := `SELECT id, content, metadata, created_at, app_id, external_user_id, 1 - (embedding <=> $1) AS score
+				 FROM seeds 
+				 WHERE 1=1 `
+	args := []interface{}{vec, limit}
+	argIdx := 3
+
 	if len(seedIDs) > 0 {
-		rows, err = s.pool.Query(ctx,
-			`SELECT id, content, metadata, created_at, 1 - (embedding <=> $1) AS score
-			 FROM seeds 
-			 WHERE id = ANY($3)
-			 ORDER BY embedding <=> $1 LIMIT $2`,
-			vec, limit, seedIDs,
-		)
-	} else {
-		rows, err = s.pool.Query(ctx,
-			`SELECT id, content, metadata, created_at, 1 - (embedding <=> $1) AS score
-			 FROM seeds 
-			 ORDER BY embedding <=> $1 LIMIT $2`,
-			vec, limit,
-		)
+		baseQuery += ` AND id = ANY($` + strconv.Itoa(argIdx) + `)`
+		args = append(args, seedIDs)
+		argIdx++
 	}
+	if appID != "" {
+		baseQuery += ` AND app_id = $` + strconv.Itoa(argIdx)
+		args = append(args, appID)
+		argIdx++
+	}
+	if externalUserID != "" {
+		baseQuery += ` AND external_user_id = $` + strconv.Itoa(argIdx)
+		args = append(args, externalUserID)
+		argIdx++
+	}
+
+	baseQuery += ` ORDER BY embedding <=> $1 LIMIT $2`
+	rows, err = s.pool.Query(ctx, baseQuery, args...)
 
 	if err != nil {
 		return nil, err
@@ -167,7 +181,7 @@ func (s *Store) Search(ctx context.Context, queryEmbedding []float32, limit int,
 	for rows.Next() {
 		var se Seed
 		var createdAt time.Time
-		err := rows.Scan(&se.ID, &se.Content, &se.Metadata, &createdAt, &se.Score)
+		err := rows.Scan(&se.ID, &se.Content, &se.Metadata, &createdAt, &se.AppID, &se.ExternalUserID, &se.Score)
 		if err != nil {
 			return nil, err
 		}
@@ -178,15 +192,30 @@ func (s *Store) Search(ctx context.Context, queryEmbedding []float32, limit int,
 }
 
 // GetRecent returns the most recently created seeds, purely chronological, without vector search.
-func (s *Store) GetRecent(ctx context.Context, limit int) ([]Seed, error) {
+func (s *Store) GetRecent(ctx context.Context, limit int, appID, externalUserID string) ([]Seed, error) {
 	if limit <= 0 {
 		limit = 10
 	}
-	rows, err := s.pool.Query(ctx,
-		`SELECT id, content, metadata, created_at, 0 AS score
-		 FROM seeds ORDER BY created_at DESC LIMIT $1`,
-		limit,
-	)
+
+	baseQuery := `SELECT id, content, metadata, created_at, app_id, external_user_id, 0 AS score
+				 FROM seeds 
+				 WHERE 1=1 `
+	args := []interface{}{limit}
+	argIdx := 2
+
+	if appID != "" {
+		baseQuery += ` AND app_id = $` + strconv.Itoa(argIdx)
+		args = append(args, appID)
+		argIdx++
+	}
+	if externalUserID != "" {
+		baseQuery += ` AND external_user_id = $` + strconv.Itoa(argIdx)
+		args = append(args, externalUserID)
+		argIdx++
+	}
+
+	baseQuery += ` ORDER BY created_at DESC LIMIT $1`
+	rows, err := s.pool.Query(ctx, baseQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +224,7 @@ func (s *Store) GetRecent(ctx context.Context, limit int) ([]Seed, error) {
 	for rows.Next() {
 		var se Seed
 		var createdAt time.Time
-		err := rows.Scan(&se.ID, &se.Content, &se.Metadata, &createdAt, &se.Score)
+		err := rows.Scan(&se.ID, &se.Content, &se.Metadata, &createdAt, &se.AppID, &se.ExternalUserID, &se.Score)
 		if err != nil {
 			return nil, err
 		}
@@ -206,14 +235,15 @@ func (s *Store) GetRecent(ctx context.Context, limit int) ([]Seed, error) {
 }
 
 // InsertContext adds an agent context and returns its ID.
-func (s *Store) InsertContext(ctx context.Context, agentID, memoryType string, payload json.RawMessage) (string, error) {
+func (s *Store) InsertContext(ctx context.Context, agentID, memoryType string, payload json.RawMessage, appID, externalUserID string) (string, error) {
 	if payload == nil {
 		payload = []byte("{}")
 	}
 	var id string
 	err := s.pool.QueryRow(ctx,
-		`INSERT INTO agent_contexts (agent_id, memory_type, payload) VALUES ($1, $2, COALESCE($3::jsonb, '{}')) RETURNING id::text`,
-		agentID, memoryType, payload,
+		`INSERT INTO agent_contexts (agent_id, memory_type, payload, app_id, external_user_id) 
+		 VALUES ($1, $2, COALESCE($3::jsonb, '{}'), $4, $5) RETURNING id::text`,
+		agentID, memoryType, payload, appID, externalUserID,
 	).Scan(&id)
 	if err != nil {
 		return "", err
@@ -222,29 +252,37 @@ func (s *Store) InsertContext(ctx context.Context, agentID, memoryType string, p
 }
 
 // ListContexts returns agent contexts for the given agentID (empty = all), optionally filtered by memoryType.
-func (s *Store) ListContexts(ctx context.Context, agentID, memoryType string) ([]AgentContext, error) {
+func (s *Store) ListContexts(ctx context.Context, agentID, memoryType string, appID, externalUserID string) ([]AgentContext, error) {
 	var rows pgx.Rows
 	var err error
-	if agentID != "" && memoryType != "" {
-		rows, err = s.pool.Query(ctx,
-			`SELECT id::text, agent_id, memory_type, payload, created_at FROM agent_contexts WHERE agent_id = $1 AND memory_type = $2 ORDER BY created_at`,
-			agentID, memoryType,
-		)
-	} else if agentID != "" {
-		rows, err = s.pool.Query(ctx,
-			`SELECT id::text, agent_id, memory_type, payload, created_at FROM agent_contexts WHERE agent_id = $1 ORDER BY created_at`,
-			agentID,
-		)
-	} else if memoryType != "" {
-		rows, err = s.pool.Query(ctx,
-			`SELECT id::text, agent_id, memory_type, payload, created_at FROM agent_contexts WHERE memory_type = $1 ORDER BY created_at`,
-			memoryType,
-		)
-	} else {
-		rows, err = s.pool.Query(ctx,
-			`SELECT id::text, agent_id, memory_type, payload, created_at FROM agent_contexts ORDER BY created_at`,
-		)
+
+	baseQuery := `SELECT id::text, agent_id, memory_type, payload, created_at, app_id, external_user_id FROM agent_contexts WHERE 1=1`
+	args := []interface{}{}
+	argIdx := 1
+
+	if agentID != "" {
+		baseQuery += ` AND agent_id = $` + strconv.Itoa(argIdx)
+		args = append(args, agentID)
+		argIdx++
 	}
+	if memoryType != "" {
+		baseQuery += ` AND memory_type = $` + strconv.Itoa(argIdx)
+		args = append(args, memoryType)
+		argIdx++
+	}
+	if appID != "" {
+		baseQuery += ` AND app_id = $` + strconv.Itoa(argIdx)
+		args = append(args, appID)
+		argIdx++
+	}
+	if externalUserID != "" {
+		baseQuery += ` AND external_user_id = $` + strconv.Itoa(argIdx)
+		args = append(args, externalUserID)
+		argIdx++
+	}
+
+	baseQuery += ` ORDER BY created_at`
+	rows, err = s.pool.Query(ctx, baseQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +291,7 @@ func (s *Store) ListContexts(ctx context.Context, agentID, memoryType string) ([
 	for rows.Next() {
 		var c AgentContext
 		var createdAt time.Time
-		err := rows.Scan(&c.ID, &c.AgentID, &c.MemoryType, &c.Payload, &createdAt)
+		err := rows.Scan(&c.ID, &c.AgentID, &c.MemoryType, &c.Payload, &createdAt, &c.AppID, &c.ExternalUserID)
 		if err != nil {
 			return nil, err
 		}
@@ -282,9 +320,9 @@ func (s *Store) GetContext(ctx context.Context, id string) (*AgentContext, error
 	var c AgentContext
 	var createdAt time.Time
 	err := s.pool.QueryRow(ctx,
-		`SELECT id::text, agent_id, memory_type, payload, created_at FROM agent_contexts WHERE id = $1::uuid`,
+		`SELECT id::text, agent_id, memory_type, payload, created_at, app_id, external_user_id FROM agent_contexts WHERE id = $1::uuid`,
 		id,
-	).Scan(&c.ID, &c.AgentID, &c.MemoryType, &c.Payload, &createdAt)
+	).Scan(&c.ID, &c.AgentID, &c.MemoryType, &c.Payload, &createdAt, &c.AppID, &c.ExternalUserID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil

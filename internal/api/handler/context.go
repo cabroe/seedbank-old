@@ -55,7 +55,10 @@ func HandleCreateContext(s *store.Store) http.HandlerFunc {
 				}
 			}
 		}
-		id, err := s.InsertContext(r.Context(), req.AgentID, req.MemoryType, payload)
+		appID := r.URL.Query().Get("appId")
+		externalUserID := r.URL.Query().Get("externalUserId")
+
+		id, err := s.InsertContext(r.Context(), req.AgentID, req.MemoryType, payload, appID, externalUserID)
 		if err != nil {
 			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -77,7 +80,10 @@ func HandleListContexts(s *store.Store) http.HandlerFunc {
 			apilib.RespondError(w, http.StatusBadRequest, "memoryType must be one of: episodic, semantic, procedural, working")
 			return
 		}
-		list, err := s.ListContexts(r.Context(), agentID, memoryType)
+		appID := r.URL.Query().Get("appId")
+		externalUserID := r.URL.Query().Get("externalUserId")
+
+		list, err := s.ListContexts(r.Context(), agentID, memoryType, appID, externalUserID)
 		if err != nil {
 			apilib.RespondError(w, http.StatusInternalServerError, err.Error())
 			return
