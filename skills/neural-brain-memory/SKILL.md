@@ -71,7 +71,7 @@ Use the provided bash script for manual operations:
 
 ### Save Text as a Seed
 ```bash
-./scripts/neural-brain-memory.sh save "User prefers Go for backend development" "User preference"
+./scripts/neural-brain-memory.sh save "Content to remember" "Title of this memory"
 ```
 
 ### Semantic Search
@@ -81,7 +81,7 @@ Use the provided bash script for manual operations:
 
 ### Create Agent Context
 ```bash
-./scripts/neural-brain-memory.sh context-create "my-agent" "episodic" '{"last_action":"refactoring"}'
+./scripts/neural-brain-memory.sh context-create "my-agent" "episodic" '{"key":"value"}'
 ```
 
 ### List Agent Contexts
@@ -91,7 +91,7 @@ Use the provided bash script for manual operations:
 
 ### Get Specific Context
 ```bash
-./scripts/neural-brain-memory.sh context-get <uuid>
+./scripts/neural-brain-memory.sh context-get abc-123
 ```
 
 ## API Compatibility

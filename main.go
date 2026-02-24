@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -36,24 +38,78 @@ func (w *responseWriter) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
+type Config struct {
+	URL            string  `json:"url"`
+	AgentID        string  `json:"agent_id"`
+	ExternalUserID string  `json:"external_user_id"`
+	AutoRecall     bool    `json:"auto_recall"`
+	AutoCapture    bool    `json:"auto_capture"`
+	DatabaseURL    string  `json:"database_url"`
+	GTEModelPath   string  `json:"gte_model_path"`
+	Port           string  `json:"port"`
+	DedupThreshold float64 `json:"dedup_threshold"`
+}
+
+func loadJSONConfig() *Config {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	path := filepath.Join(home, ".config", "neural-brain", "credentials.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		log.Printf("warning: failed to parse config file %s: %v", path, err)
+		return nil
+	}
+	return &cfg
+}
+
 func main() {
+	cfg := loadJSONConfig()
+
 	modelPath := os.Getenv("GTE_MODEL_PATH")
+	if modelPath == "" && cfg != nil {
+		modelPath = cfg.GTEModelPath
+	}
 	if modelPath == "" {
 		modelPath = "./models/gte-small.gtemodel"
 	}
+
 	port := os.Getenv("PORT")
+	if port == "" && cfg != nil {
+		if cfg.Port != "" {
+			port = cfg.Port
+		} else if cfg.URL != "" {
+			if u, err := url.Parse(cfg.URL); err == nil {
+				if p := u.Port(); p != "" {
+					port = p
+				}
+			}
+		}
+	}
 	if port == "" {
 		port = "9124"
 	}
+
 	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" && cfg != nil {
+		databaseURL = cfg.DatabaseURL
+	}
 	if databaseURL == "" {
 		databaseURL = "postgres://neural-brain:neural-brain@localhost:5433/neural-brain?sslmode=disable"
 	}
+
 	dedupThreshold := 0.0
 	if s := os.Getenv("DEDUP_THRESHOLD"); s != "" {
 		if v, err := strconv.ParseFloat(s, 64); err == nil && v >= 0 {
 			dedupThreshold = v
 		}
+	} else if cfg != nil {
+		dedupThreshold = cfg.DedupThreshold
 	}
 
 	if _, err := model.LoadModel(modelPath); err != nil {

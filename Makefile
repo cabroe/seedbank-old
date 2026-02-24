@@ -49,7 +49,7 @@ install: build install-skills
 
 install-skills:
 	mkdir -p $$HOME/.openclaw/workspace/skills
-	cp -r skills/* $$HOME/.openclaw/workspace/skills/
+	cp -r skills/neural-brain-memory $$HOME/.openclaw/workspace/skills/
 	@echo "Skills erfolgreich nach ~/.openclaw/workspace/skills kopiert."
 
 logs:

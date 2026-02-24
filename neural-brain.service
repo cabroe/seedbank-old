@@ -6,8 +6,6 @@ After=network.target
 Type=simple
 # Pfad anpassen, falls das Repo woanders liegt:
 WorkingDirectory=/home/jarvis/neural-brain
-EnvironmentFile=/home/jarvis/neural-brain/.env
-ExecStartPre=/usr/bin/bash -c 'until docker exec neural-brain-postgres-1 pg_isready -U neural-brain; do sleep 2; done'
 ExecStart=/home/jarvis/neural-brain/neural-brain
 StandardOutput=journal
 StandardError=journal
