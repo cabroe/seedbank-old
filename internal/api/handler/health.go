@@ -39,18 +39,15 @@ func HandleStats(s *store.Store) http.HandlerFunc {
 func HandleHealth(pool HealthPinger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if model.Model() == nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("model not loaded"))
+			apilib.RespondError(w, http.StatusServiceUnavailable, "model not loaded")
 			return
 		}
 		if pool != nil {
 			if err := pool.Ping(r.Context()); err != nil {
-				w.WriteHeader(http.StatusServiceUnavailable)
-				w.Write([]byte("database unreachable"))
+				apilib.RespondError(w, http.StatusServiceUnavailable, "database unreachable")
 				return
 			}
 		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		apilib.RespondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	}
 }

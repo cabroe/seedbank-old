@@ -36,7 +36,14 @@ fi
 # Pretty-print JSON if jq is available
 format_json() {
     if command -v jq &> /dev/null; then
-        jq .
+        local input
+        input=$(cat)
+        if [[ -z "$input" ]]; then return; fi
+        if printf "%s" "$input" | jq . >/dev/null 2>&1; then
+            printf "%s" "$input" | jq .
+        else
+            printf "%s\n" "$input"
+        fi
     else
         cat
     fi
