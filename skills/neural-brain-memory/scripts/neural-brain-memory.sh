@@ -1,12 +1,33 @@
 #!/usr/bin/env bash
-# Neural Brain Agent Memory CLI — Neutron-compatible interface (https://openclaw.vanarchain.com/guide-openclaw)
-# Use NEURAL_BRAIN_URL to point at Neural Brain (default http://localhost:9124). Optional: NEUTRON_AGENT_ID, YOUR_AGENT_IDENTIFIER for query params.
+# Neural Brain Agent Memory CLI — Neutron-compatible interface
+# Use NEURAL_BRAIN_URL to point at Neural Brain (default http://localhost:9124).
 
-BASE_URL="${NEURAL_BRAIN_URL:-http://localhost:9124}"
-APP_ID="${NEUTRON_AGENT_ID:-}"
-EXTERNAL_USER_ID="${YOUR_AGENT_IDENTIFIER:-1}"
+BASE_URL="${NEURAL_BRAIN_URL:-}"
+CONFIG_FILE="${HOME}/.config/neural-brain/credentials.json"
 
-# Optional query params for Neutron compatibility (Neural Brain ignores them)
+# Load credentials - env vars first, then credentials file
+APP_ID="${NEURAL_BRAIN_AGENT_ID:-}"
+EXTERNAL_USER_ID="${NEURAL_BRAIN_EXTERNAL_USER_ID:-}"
+
+if [[ -z "$BASE_URL" ]] || [[ -z "$APP_ID" ]]; then
+    if [[ -f "$CONFIG_FILE" ]]; then
+        if command -v jq &> /dev/null; then
+            [[ -z "$BASE_URL" ]] && BASE_URL=$(jq -r '.url // empty' "$CONFIG_FILE" 2>/dev/null)
+            [[ -z "$APP_ID" ]] && APP_ID=$(jq -r '.agent_id // empty' "$CONFIG_FILE" 2>/dev/null)
+            [[ -z "$EXTERNAL_USER_ID" ]] && EXTERNAL_USER_ID=$(jq -r '.external_user_id // empty' "$CONFIG_FILE" 2>/dev/null)
+        else
+            [[ -z "$BASE_URL" ]] && BASE_URL=$(grep '"url"' "$CONFIG_FILE" | sed 's/.*"url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+            [[ -z "$APP_ID" ]] && APP_ID=$(grep '"agent_id"' "$CONFIG_FILE" | sed 's/.*"agent_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+            [[ -z "$EXTERNAL_USER_ID" ]] && EXTERNAL_USER_ID=$(grep '"external_user_id"' "$CONFIG_FILE" | sed 's/.*"external_user_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+        fi
+    fi
+fi
+
+# Fallback defaults
+BASE_URL="${BASE_URL:-http://localhost:9124}"
+EXTERNAL_USER_ID="${EXTERNAL_USER_ID:-1}"
+
+# Optional query params for multi-tenancy
 QUERY_PARAMS=""
 if [[ -n "$APP_ID" ]]; then
     QUERY_PARAMS="appId=${APP_ID}&externalUserId=${EXTERNAL_USER_ID}"
@@ -21,7 +42,7 @@ format_json() {
     fi
 }
 
-# Commands (same CLI as neutron-memory.sh)
+# Commands
 case "${1:-}" in
     save)
         text="$2"
@@ -140,7 +161,7 @@ case "${1:-}" in
         fi
         ;;
     *)
-        echo "Neural Brain Agent Memory CLI (Neutron-compatible)"
+        echo "Neural Brain Agent Memory CLI"
         echo ""
         echo "Usage: neural-brain-memory [command] [args]"
         echo ""
@@ -157,12 +178,11 @@ case "${1:-}" in
         echo "Utility:"
         echo "  test                                      Test API connection"
         echo ""
-        echo "Environment: NEURAL_BRAIN_URL (default http://localhost:9124). Optional: NEUTRON_AGENT_ID, YOUR_AGENT_IDENTIFIER"
+        echo "Environment: NEURAL_BRAIN_URL, NEURAL_BRAIN_AGENT_ID, NEURAL_BRAIN_EXTERNAL_USER_ID"
         echo ""
         echo "Examples:"
         echo "  neural-brain-memory save \"Hello world\" \"My first seed\""
         echo "  neural-brain-memory search \"hello\" 10 0.5"
-        echo "  neural-brain-memory search \"hello\" 10 0.5 \"1,2\""
         echo "  neural-brain-memory context-create \"my-agent\" \"episodic\" '{\"key\":\"value\"}'"
         echo "  neural-brain-memory context-list \"my-agent\""
         echo "  neural-brain-memory context-get abc-123"

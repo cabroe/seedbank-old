@@ -1,32 +1,43 @@
 #!/usr/bin/env bash
-# Auto-Recall: Query memories before AI turn (Neutron-compatible: POST /seeds/query, .results[].content)
+# Auto-Recall: Query memories before AI turn
 
 # Check if auto-recall is enabled (default: true)
+# Use environment variable or fallback to default
+NEURAL_BRAIN_AUTO_RECALL="${NEURAL_BRAIN_AUTO_RECALL:-}"
+
+BASE_URL="${NEURAL_BRAIN_URL:-}"
+CONFIG_FILE="${HOME}/.config/neural-brain/credentials.json"
+
+# Load credentials and settings
+APP_ID="${NEURAL_BRAIN_AGENT_ID:-}"
+EXTERNAL_USER_ID="${NEURAL_BRAIN_EXTERNAL_USER_ID:-}"
+
+if [[ -f "$CONFIG_FILE" ]]; then
+    [[ -z "$BASE_URL" ]] && BASE_URL=$(jq -r '.url // empty' "$CONFIG_FILE" 2>/dev/null || true)
+    [[ -z "$APP_ID" ]] && APP_ID=$(jq -r '.agent_id // empty' "$CONFIG_FILE" 2>/dev/null || true)
+    [[ -z "$EXTERNAL_USER_ID" ]] && EXTERNAL_USER_ID=$(jq -r '.external_user_id // empty' "$CONFIG_FILE" 2>/dev/null || true)
+    [[ -z "$NEURAL_BRAIN_AUTO_RECALL" ]] && NEURAL_BRAIN_AUTO_RECALL=$(jq -r '.auto_recall // "true"' "$CONFIG_FILE" 2>/dev/null || true)
+fi
+
+# Apply defaults
+BASE_URL="${BASE_URL:-http://localhost:9124}"
+EXTERNAL_USER_ID="${EXTERNAL_USER_ID:-1}"
 NEURAL_BRAIN_AUTO_RECALL="${NEURAL_BRAIN_AUTO_RECALL:-true}"
+
+# Exit if disabled or if essential configuration is missing
 [[ "$NEURAL_BRAIN_AUTO_RECALL" != "true" ]] && exit 0
-
-set -euo pipefail
-
-BASE_URL="${NEURAL_BRAIN_URL:-http://localhost:9124}"
-APP_ID="${NEUTRON_AGENT_ID:-}"
-EXTERNAL_USER_ID="${YOUR_AGENT_IDENTIFIER:-1}"
-
-QUERY_PARAMS=""
-[[ -n "$APP_ID" ]] && QUERY_PARAMS="appId=${APP_ID}&externalUserId=${EXTERNAL_USER_ID}"
+[[ -z "$APP_ID" ]] && exit 0
 
 USER_MESSAGE="${OPENCLAW_USER_MESSAGE:-}"
 [[ -z "$USER_MESSAGE" ]] && exit 0
 
-# Neutron-compatible: POST /seeds/query with JSON body; response has .results[].content
-if [[ -n "$QUERY_PARAMS" ]]; then
-    response=$(curl -s -X POST "${BASE_URL}/seeds/query?${QUERY_PARAMS}" \
-        -H "Content-Type: application/json" \
-        -d "{\"query\":\"${USER_MESSAGE}\",\"limit\":5,\"threshold\":0.5}" 2>/dev/null || echo "{\"results\":[]}")
-else
-    response=$(curl -s -X POST "${BASE_URL}/seeds/query" \
-        -H "Content-Type: application/json" \
-        -d "{\"query\":\"${USER_MESSAGE}\",\"limit\":5,\"threshold\":0.5}" 2>/dev/null || echo "{\"results\":[]}")
-fi
+QUERY_PARAMS="appId=${APP_ID}&externalUserId=${EXTERNAL_USER_ID}"
+
+# Query for relevant memories
+# POST /seeds/query with JSON body; response has .results[].content
+response=$(curl -s -X POST "${BASE_URL}/seeds/query?${QUERY_PARAMS}" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\":\"${USER_MESSAGE}\",\"limit\":5,\"threshold\":0.5}" 2>/dev/null || echo "{\"results\":[]}")
 
 memories=$(echo "$response" | jq -r '.results[]?.content // empty' 2>/dev/null | head -500)
 
